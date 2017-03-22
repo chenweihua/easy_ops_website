@@ -1,0 +1,234 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Playbook Result page
+{% endblock %}
+
+{% block subcontent %}
+<script src="/static/js/jquery-ui.min.js"></script>
+<div class="main_cont">
+	<span class="title_level_1" id="id_span_title">playbook执行结果</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="JumpUpper()">返回</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="ShowReturnInfo()">结果明细</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<input id="switch-state" type="checkbox" checked>
+			</li>
+		</ul>
+	</div>
+	</br>
+    
+    <table data-toggle="table"
+			id="table"
+			data-url= '/ansible/get_playbook_result/{{ check_type }}/{{ map_or_proc_id }}/asb/'
+			data-query-params="queryParams"
+			data-pagination="true"            
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>
+			<th data-field="step_id" data-sortable="true">步骤</th>
+			<th data-field="obj_id" data-sortable="true">任务</th>
+			<th data-field="host" data-sortable="true">主机</th>
+		</tr>
+		</thead>
+	</table>
+	<div id="id_div_test" style="height:400px;width:700px;"></div>
+</div>
+
+
+<div id="id_modal_common" class="modal fade" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 id="id_h4_title" class="modal-title"></h4>
+            </div>
+            <div id="id_div_body" class="modal-body">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script type="text/javascript">
+    
+
+    //console.log('deb',{{check_type}},{{map_or_proc_id}});
+    var $table = $('#table');
+
+	$(function (){
+		ProProcess();		
+	});
+    
+    function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common,#id_modal_2").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+        
+        //高亮所选行
+        $table.on('click-row.bs.table', function (e, row, $element) {
+            $('.success').removeClass('success');
+            $($element).addClass('success');
+		});	
+        
+        InitSwitch();
+        
+        if ('{{check_type}}' == 'all'){
+            $("#id_span_title").text("playbook执行结果");
+        }
+        else if ('{{check_type}}' == 'step'){
+            $("#id_span_title").text("playbook分步执行结果");
+        }
+        
+	}
+	
+    function InitSwitch(){
+        $("#switch-state").data("on-text","asb回显");
+        $("#switch-state").data("off-text","任务回显");
+        $("#switch-state").data("on-color","default");
+        $("#switch-state").data("off-color","default");
+        $("#switch-state").data("label-text","切换");
+        $("#switch-state").data("size","normal");
+        //$("#switch-state").data("switch-toggle","");
+        $("#switch-state").on('switchChange.bootstrapSwitch',function(event,state){
+            SwitchPresention(state);
+        });
+        
+        
+        $("#switch-state").bootstrapSwitch();    
+    }
+    
+ 
+	function JumpUpper(){
+        if ('{{check_type}}' == 'step'){
+            location.href = '/ansible/proc_playbook_by_step/' + '{{mapid}}/';
+        }
+        else if('{{check_type}}' == 'all'){
+            location.href = "{% url 'asb_playbook_page_url' %}";
+        }
+    
+		
+	}
+    
+    function ProcRetInfo(sInfo){
+        sInfo = sInfo.replace(/#_#/g,'\n');
+        
+        //sInfo = sInfo.replace(/'/g,"\\'");
+        console.log(sInfo);
+        if(getSelectedRow().host != '0.0.0.0'){
+            sFormatInfo = '';
+            aTmp = sInfo.split('@_@');
+            if (aTmp.length == 2){
+                for (var i in aTmp){
+                    sStr = ProFormatJson(aTmp[i]);
+                    console.log(sStr);
+                    sFormatInfo += formatJson(sStr) + '--------';                
+                }
+            }
+            else {
+                sFormatInfo = formatJson(sInfo);
+            }
+            
+        }
+        else{
+            sFormatInfo = sInfo;
+        }
+        
+        sRet = '<pre style = "background-color: #000000;color:#00bb00;font-size:15px;white-space:pre-wrap;">' + sFormatInfo + '</pre>'
+        
+        return sRet;
+    }
+	
+    function ShowReturnInfo(){
+        //查看详细返回信息
+        $("#id_h4_title").empty();
+		$("#id_div_body").empty();
+        console.log(getSelectedRow().result_info);
+        if (getSelectedRow().host == '0.0.0.0'){
+            $("#id_h4_title").text('ansbile执行回显'); 
+        }
+        else{
+            $("#id_h4_title").text('任务执行回显');
+        }
+        
+        $("#id_div_body").append(ProcRetInfo(getSelectedRow().result_info));
+        
+        $("#id_modal_common").modal();
+    }
+    
+    function SwitchPresention(bState){
+        if (bState == true){
+            //console.log('asb回显');
+            $("#table").bootstrapTable('refresh',{
+                //url: '/ansible/get_playbook_result/asb/{{ mapid }}/',
+                url: '/ansible/get_playbook_result/{{ check_type }}/{{ map_or_proc_id }}/asb/',
+            });
+        }
+        else if(bState == false){
+            //console.log('任务回显');
+            $("#table").bootstrapTable('refresh',{
+                //url: '/ansible/get_playbook_result/proc/{{ mapid }}/',
+                url: '/ansible/get_playbook_result/{{ check_type }}/{{ map_or_proc_id }}/proc/',
+            });
+        }
+    }
+    
+    function ProFormatJson(sStr){
+        //对json字符串预处理，将其规范化
+        //step 1:将单引号替换为双引号
+        sStr = sStr.replace(/'/g,'"');
+        //step 2:将' u"'替换为"
+        sStr = sStr.replace(/\su"/g,'"');
+        //step 3:将'{u"'替换为'{"'
+        sStr = sStr.replace(/\{u"/g,'{"');
+        //step 4:将'[u"'替换为'["'
+        sStr = sStr.replace(/\[u"/g,'["');
+        //step 5:将 False、True替换为"False"/"True"
+        sStr = sStr.replace(/:\sFalse/g,': "False"');
+        sStr = sStr.replace(/:\sTrue/g,': "True"');
+        return sStr;
+    }
+    
+    
+    
+	
+</script>
+{% endblock %}

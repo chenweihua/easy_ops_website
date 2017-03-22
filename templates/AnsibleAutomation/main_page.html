@@ -1,0 +1,139 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Main page
+{% endblock %}
+
+{% block subcontent %}
+<div class="main_cont">
+
+	<span class="title_level_1">操作类型</span>
+	<ul class="asb_ul">
+		<li class="asb_li">
+			<div class="asb_rectangle">
+				<a href={% url 'asb_atom_task_page_url' %}>
+					<div class="atom_icon"></div>
+					<span class="title_level_2">原子操作管理</span>
+					<span class="asb_cnt" id="id_atom_icon_cnt"></span>
+				</a>
+			</div>
+		</li>
+		<li class="asb_li">
+			<div class="asb_rectangle">
+				<a href={% url 'asb_file_page_url' %}>
+					<div class="file_icon"></div>
+					<span class="title_level_2">上传文件管理</span>
+					<span class="asb_cnt" id="id_file_cnt"></span>
+				</a>
+			</div>
+		</li>
+		<li class="asb_li">
+			<div class="asb_rectangle">
+				<a href={% url 'asb_host_page_url' %}>
+					<div class="host_icon"></div>
+					<span class="title_level_2">设备管理</span>
+					<span class="asb_cnt" id="id_host_cnt"></span>
+				</a>
+			</div>
+		</li>
+		<!-- <li class="asb_li"> -->
+			<!-- <div class="asb_rectangle"> -->
+				<!-- <a href={% url 'asb_host_group_page_url' %}> -->
+					<!--` <div class="host_group_icon"></div> -->
+					<!-- <span class="title_level_2">设备分组管理</span> -->
+					<!-- <span class="asb_cnt" id="id_host_group_cnt"></span> -->
+				<!-- </a> -->
+			<!-- </div> -->
+		<!-- </li>		 -->
+		<li class="asb_li">
+			<div class="asb_rectangle">
+				<a href={% url 'asb_user_group_page_url' %}>
+					<div class="user_group_icon"></div>
+					<span class="title_level_2">组成员管理</span>
+					<span class="asb_cnt" id="id_user_cnt"></span>
+				</a>
+			</div>
+		</li>
+		<li class="asb_li">
+			<div class="asb_rectangle">
+				<a href={% url 'asb_playbook_page_url' %}>
+					<div class="playbook_icon"></div>
+					<span class="title_level_2">playbook编排</span>
+					<span class="asb_cnt" id="id_playbook_cnt"></span>
+				</a>
+			</div>
+		</li>
+		
+
+	</ul>
+</div>
+
+<script type="text/javascript">
+	$(function(){
+		//获取该用户能看到的所有原子任务
+		GetAtomTaskCnt();
+		GetHostCnt();
+		GetUserCnt();
+        GetPlaybookCnt();
+        GetFileCnt();
+	});
+	
+	function GetAtomTaskCnt(){
+		$.ajax({
+			type:"GET",
+			url:'/ansible/get_atom_task_data/using/cnt_flag/',
+			success:function(data){
+				console.log(data[0]['cnt']);
+				$("#id_atom_icon_cnt").text(data[0]['cnt']);
+			}
+		});
+	}
+	
+	function GetHostCnt(){
+		$.ajax({
+			type:"GET",
+			url:'/ansible/get_host_data/using/cnt_flag/',
+			success:function(data){
+				console.log(data[0]['cnt']);
+				$("#id_host_cnt").text(data[0]['cnt']);
+			}
+		});
+	}
+	
+	function GetUserCnt(){
+		$.ajax({
+			type:"GET",
+			url:'/ansible/get_user_data/using/cnt_flag/',
+			success:function(data){
+				console.log(data[0]['cnt']);
+				$("#id_user_cnt").text(data[0]['cnt']);
+			}
+		});
+	}
+    
+    function GetPlaybookCnt(){
+		$.ajax({
+			type:"GET",
+			url:'/ansible/get_playbook_table_data/using/cnt_flag/',
+			success:function(data){
+				console.log(data[0]['cnt']);
+				$("#id_playbook_cnt").text(data[0]['cnt']);
+			}
+		});
+	}
+    
+    function GetFileCnt(){
+		$.ajax({
+			type:"GET",
+			url:'/ansible/get_file_data/using/cnt_flag/',
+			success:function(data){
+				console.log(data[0]['cnt']);
+				$("#id_file_cnt").text(data[0]['cnt']);
+			}
+		});
+	}
+	
+	
+</script>
+
+{% endblock %}

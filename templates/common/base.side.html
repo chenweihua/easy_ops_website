@@ -1,0 +1,86 @@
+{% extends "common/base.nav.html" %}
+
+{% block content %}
+    <div class="container" style="width:100%">
+        <div class="row">
+            <!-- 侧边栏 -->
+			<!--
+            <div class="col-md-2 col-sm-2 col-lg-2 col-xs-2">
+			<div style="width:250px;float:left;position:relative;padding:5px;">
+			-->	
+			<div class="col-md-2 col-sm-2 col-lg-2 col-xs-2">
+                {% if user.is_authenticated %}
+                    <div class="panel-group" id="accordion">
+
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" class="collapsed"><span class="glyphicon glyphicon-list-alt btn-xs"></span>运维工具</a>
+                                </h4>
+                            </div>
+                            <div id="collapseOne" class="panel-collapse collapse {% if 'tools' in request.path or 'watchdog' in request.path or 'ansible' in request.path%} in {% endif %}">
+                                <div class="panel-body">
+                                    <table class="table">
+                                        <tbody>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "task_watchdogurl" %}>大机配置监控</a></td></tr>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "asb_main_page_url" %}>ansible自动化</a></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+						
+						<div class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseThree" class="collapsed"><span class="glyphicon glyphicon-list-alt btn-xs"></span>内网拨测系统</a>
+                                </h4>
+                            </div>
+                            <div id="collapseThree" class="panel-collapse collapse {% if 'intnetdet' in request.path %} in {% endif %}">
+                                <div class="panel-body">
+                                    <table class="table">
+                                        <tbody>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "main_page_url" %}>IP连通性探测</a></td></tr>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "sw_main_page_url" %}>交换机MAC表探测</a></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+						
+						{% if user.is_superuser %}
+                        <div id="id_div_promission_manage" class="panel panel-default">
+                            <div class="panel-heading">
+                                <h4 class="panel-title">
+                                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" class="collapsed"><span class="glyphicon glyphicon-list-alt btn-xs"></span>用户管理</a>
+                                </h4>
+                            </div>
+                            <div id="collapseTwo" class="panel-collapse collapse {% if 'accounts' in request.path %} in {% endif %}">
+                                <div class="panel-body">
+                                    <table class="table">
+                                        <tbody>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "listuserurl" %}>用户管理</a></td></tr>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "listroleurl" %}>角色管理</a></td></tr>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "listpermissionurl" %}>权限管理</a></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+						{% endif %}
+
+                    </div>
+                {% endif %}
+            </div>
+			
+			<!--
+			<div style="padding:20px;position:relative;margin-left:250px;">
+			-->
+            <!-- 内容区域 -->
+            <div class="col-md-10 col-sm-10 col-lg-10 col-xs-10">
+                {% block rcontent %}{% endblock %}
+            </div>
+
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,77 @@
+<script type="text/javascript" src="/static/draw2d/new/shifty.js"></script>
+		<script src="/static/js/jquery-1.11.0.min.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/rgbcolor.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/pathfinding-browser.min.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/raphael.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/Class.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/canvg.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/json2.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/jquery-touch_punch.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/jquery.contextmenu.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/jquery.autoresize.js"></script>
+		<script type="text/javascript" src="/static/draw2d/new/draw2d.js"></script>
+
+
+<div style="border-bottom: 1px solid #ccc;">
+<!-- 
+img[src=""][data-content=""][data-shape="draw2d.shape.node.WorkFlowBaseImage"][data-id="0"][data-width="38"]data-heigh
+-->
+</div>
+<div id="id_playbook_holder" style="height:700px;width:100%;"></div>
+
+
+<script type="text/javascript">
+	window.onload = function () {
+		var canvas = new draw2d.Canvas("id_playbook_holder");
+		//console.log(canvas);
+		
+		var figure1 = new draw2d.shape.basic.Oval();
+		var figure2 = new draw2d.shape.basic.Rectangle();
+		//var figure3 = new draw2d.shape.node.WorkFlowBaseImage(3,60,60);
+		//var figure3 = new draw2d.shape.basic.Image({path:"/static/images/my_draw2d/3.png",width:16,height:16});
+		//console.log(figure3);
+		
+		canvas.add(figure1,100,100);
+		canvas.add(figure2,120,150);
+		//canvas.add(figure3,120,150);
+		
+		/*
+		// create and add two nodes which contains Ports (In and OUT)
+		//
+		var start = new draw2d.shape.node.Start();
+		var end   = new draw2d.shape.node.End();
+
+		// ...add it to the canvas 
+		canvas.add( start, 90,60);
+		canvas.add( end, 230,80);
+
+		// Create a Connection and connect the Start and End node
+		//
+		var c = new draw2d.Connection();
+
+		// Set the endpoint decorations for the connection
+		//
+		c.setSourceDecorator(new draw2d.decoration.connection.BarDecorator());
+		c.setTargetDecorator(new draw2d.decoration.connection.DiamondDecorator());   
+		// Connect the endpoints with the start and end port
+		//
+		c.setSource(start.getOutputPort(0));
+		c.setTarget(end.getInputPort(0));
+
+		// and finally add the connection to the canvas
+		canvas.add(c);
+		
+		var d1 =  new draw2d.shape.basic.Diamond({x:100,y:10});
+		//var d2 =  new draw2d.shape.basic.Diamond({x:100,y:10, bgColor:"#f0f000", alpha:0.7, width:100, height:60});
+
+		canvas.add(d1);
+		//canvas.add(d2);
+
+		//canvas.setCurrentSelection(d2);
+		*/
+	};
+	 
+	
+
+	 
+</script>

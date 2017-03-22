@@ -1,0 +1,461 @@
+{% extends "InteranetDetect/intnetdet_common.html" %}
+
+{% block title %}
+	Proc Page
+{% endblock %}
+
+{% block subcontent %}
+
+<ul id="myTab" class="nav nav-tabs">
+   <li class="active">
+      <a href="#id_client_common_proc" data-toggle="tab">网络IO进程</a>
+   </li>
+   <li><a href="#id_ping_det_proc" data-toggle="tab">FAST-PING进程</a></li>
+   <li><a href="#" data-toggle="tab">ARP进程</a></li>
+</ul>
+<div id="myTabContent" class="tab-content">
+   <div class="tab-pane fade in active" id="id_client_common_proc">
+   </div>
+   <div class="tab-pane fade" id="id_ping_det_proc">
+   </div>   
+</div>
+
+<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px; visibility:hidden"></div>
+
+
+
+<script>
+	var gData = {};
+	
+	
+	$(function(){
+		
+		ProProcess();
+		QueryFunction('get_all'); //默认获取全部信息
+	});
+	
+	//----------------------------------
+		
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+	}
+
+	function QueryFunction(sIp){
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "query_proc_heartbeat_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+			},
+			//async:false,
+			success:function(data){
+				//console.log(data);
+				
+				var oDevIpTmp = {};
+				
+				for (var i in data['lcommon_proc']){
+					var oTmp = data['lcommon_proc'][i];
+					//取最新的dev_ip维度数据，用于表格展示
+					oDevIpTmp[oTmp['dev_ip']] = oTmp;
+					
+					//console.log(oTmp);
+					if (gData['lcommon_proc']){
+						if (gData['lcommon_proc'][oTmp['dev_ip']]){
+							if (gData['lcommon_proc'][oTmp['dev_ip']]['insert_time']){
+								(gData['lcommon_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+								(gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+								(gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+							}
+							else{
+								gData['lcommon_proc'][oTmp['dev_ip']]['insert_time'] = [];
+								(gData['lcommon_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+								gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+								(gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+								gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+								(gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+							}
+						}
+						else{
+							gData['lcommon_proc'][oTmp['dev_ip']] = {};
+							gData['lcommon_proc'][oTmp['dev_ip']]['insert_time'] = [];
+							(gData['lcommon_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+							gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+							(gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+							gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+							(gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+						}
+					}
+					else{
+						gData['lcommon_proc'] = {};
+						gData['lcommon_proc'][oTmp['dev_ip']] = {};
+						gData['lcommon_proc'][oTmp['dev_ip']]['insert_time'] = [];
+						(gData['lcommon_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+						gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+						(gData['lcommon_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+						gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+						(gData['lcommon_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+					}
+					
+				}
+				gData['common_proc_table'] = [];
+				var iId = 0;
+				for(var dev_ip in oDevIpTmp){
+					oDevIpTmp[dev_ip]['id'] = iId; //bbgrid
+					gData['common_proc_table'].push(oDevIpTmp[dev_ip]);
+					iId++;
+				}
+				
+				//console.log(gData);
+				
+				oDevIpTmp = {};
+				for (var i in data['lping_proc']){
+					var oTmp = data['lping_proc'][i];
+					oDevIpTmp[oTmp['dev_ip']] = oTmp;
+					//console.log(oTmp);
+					if (gData['lping_proc']){
+						if (gData['lping_proc'][oTmp['dev_ip']]){
+							if (gData['lping_proc'][oTmp['dev_ip']]['insert_time']){
+								(gData['lping_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+								(gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+								(gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+								(gData['lping_proc'][oTmp['dev_ip']]['rc1']).push(oTmp['rc1']);
+								(gData['lping_proc'][oTmp['dev_ip']]['rc2']).push(oTmp['rc2']);
+							}
+							else{
+								gData['lping_proc'][oTmp['dev_ip']]['insert_time'] = [];
+								(gData['lping_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+								gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+								(gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+								gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+								(gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+								
+								gData['lping_proc'][oTmp['dev_ip']]['rc1'] = [];
+								(gData['lping_proc'][oTmp['dev_ip']]['rc1']).push(oTmp['rc1']);
+								gData['lping_proc'][oTmp['dev_ip']]['rc2'] = [];
+								(gData['lping_proc'][oTmp['dev_ip']]['rc2']).push(oTmp['rc2']);
+							}
+						}
+						else{
+							gData['lping_proc'][oTmp['dev_ip']] = {};
+							gData['lping_proc'][oTmp['dev_ip']]['insert_time'] = [];
+							(gData['lping_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+							gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+							(gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+							gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+							(gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+							
+							gData['lping_proc'][oTmp['dev_ip']]['rc1'] = [];
+							(gData['lping_proc'][oTmp['dev_ip']]['rc1']).push(oTmp['rc1']);
+							gData['lping_proc'][oTmp['dev_ip']]['rc2'] = [];
+							(gData['lping_proc'][oTmp['dev_ip']]['rc2']).push(oTmp['rc2']);
+						}
+					}
+					else{
+						gData['lping_proc'] = {};
+						gData['lping_proc'][oTmp['dev_ip']] = {};
+						gData['lping_proc'][oTmp['dev_ip']]['insert_time'] = [];
+						(gData['lping_proc'][oTmp['dev_ip']]['insert_time']).push(oTmp['insert_time']);
+						gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num'] = [];
+						(gData['lping_proc'][oTmp['dev_ip']]['send_pkg_num']).push(oTmp['send_pkg_num']);
+						gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num'] = [];
+						(gData['lping_proc'][oTmp['dev_ip']]['recv_pkg_num']).push(oTmp['recv_pkg_num']);
+						
+						gData['lping_proc'][oTmp['dev_ip']]['rc1'] = [];
+						(gData['lping_proc'][oTmp['dev_ip']]['rc1']).push(oTmp['rc1']);
+						gData['lping_proc'][oTmp['dev_ip']]['rc2'] = [];
+						(gData['lping_proc'][oTmp['dev_ip']]['rc2']).push(oTmp['rc2']);
+						
+					}
+				}
+				gData['ping_proc_table'] = [];
+				iId = 0;
+				for(var dev_ip in oDevIpTmp){
+					oDevIpTmp[dev_ip]['id'] = iId;
+					gData['ping_proc_table'].push(oDevIpTmp[dev_ip]);
+					iId++;
+				}
+				
+				
+				var aCommonProc = gData['common_proc_table'];
+				var aIpProc = gData['ping_proc_table'];
+				
+				$("#id_client_common_proc").children().remove();
+				var MyTaskGrid = new bbGrid.View({        
+					container: $('#id_client_common_proc'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aCommonProc),
+					rows:20,
+					rowList: [20,40,80],
+					colModel: [
+						{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+						{ title: '任务类型', name: 'task',index: true,sorttype: 'string' }, 
+						{ title: '探测设备', name: 'dev_ip',index: true,sorttype: 'number' }, 
+						{ title: '发包数/分', name: 'send_pkg_num',index: true,sorttype: 'number' }, 
+						{ title: '收包数/分', name: 'recv_pkg_num',index: true,sorttype: 'number' }, 
+						{ title: '总进程数', name: 'rc0',index: true,sorttype: 'number' },
+						{ title: '任务进程名', name: 'rc1',index: true,sorttype: 'string' },
+						//{ title: '探测设备', name: 'rc2',index: true,sorttype: 'string' },
+					],
+					buttons:[
+						{
+							title:"查看",
+							onClick:function(){
+								GetGraph('lcommon_proc',this.getSelectedModels());
+							},
+						},
+					],
+				});
+				
+				$("#id_ping_det_proc").children().remove();
+				var MyTaskGrid = new bbGrid.View({        
+					container: $('#id_ping_det_proc'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aIpProc),
+					rows:20,
+					rowList: [20,40,80],
+					colModel: [
+						{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+						{ title: '任务类型', name: 'task',index: true,sorttype: 'string' }, 
+						{ title: '探测设备', name: 'dev_ip',index: true,sorttype: 'number' }, 
+						{ title: '发包数/分', name: 'send_pkg_num',index: true,sorttype: 'number' }, 
+						{ title: '收包数/分', name: 'recv_pkg_num',index: true,sorttype: 'number' }, 
+						{ title: '探测网段数', name: 'rc0',index: true,sorttype: 'number' },
+						{ title: '上报包数/分', name: 'rc1',index: true,sorttype: 'number' },
+						{ title: '接收包数/分', name: 'rc2',index: true,sorttype: 'number' },
+					],
+					buttons:[
+						{
+							title:"查看",
+							onClick:function(){
+								GetGraph('lping_proc',this.getSelectedModels());
+							},
+						},
+					],
+				});
+			}	
+		});
+	}
+	
+	function GetGraph(sProcType,Models){
+		if (_.isEmpty(Models)){
+			alert('请选择要编辑的列');
+			return;
+		}
+
+		var sDevIp = _.first(Models).get('dev_ip');
+		//console.log(sProcType,sDevIp);
+		var oData = gData[sProcType][sDevIp];
+		
+		var aTag = []; //每条线的说明
+		var aSeries = []; //具体数据
+		var aTime = []; //x轴时间
+		if (sProcType == 'lcommon_proc'){
+			aTime = oData['insert_time'];
+			aTag = ['发包数/分','收包数/分'];
+			aSeries = [
+                {
+                    name:'发包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['send_pkg_num'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+				{
+                    name:'收包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['recv_pkg_num'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+            ];
+		}
+		else if(sProcType == 'lping_proc'){
+			aTime = oData['insert_time'];
+			aTag = ['发包数/分','收包数/分','上报包数/分','接收包数/分'];
+			aSeries = [
+                {
+                    name:'发包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['send_pkg_num'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+				{
+                    name:'收包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['recv_pkg_num'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+				{
+                    name:'上报包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['rc1'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+				{
+                    name:'接收包数/分',
+                    type:'line',
+                    //data:[11, 11, 15, 13, 12, 13, 10],
+                    data:oData['rc2'],
+                    markPoint : {
+                        data : [
+                            {type : 'max', name: '最大值',symbol: 'none'},
+                            {type : 'min', name: '最小值',symbol: 'none'},
+                        ],
+                    },
+                    itemStyle : {
+                        normal : {
+                            lineStyle : {
+                                //color:'#c23531',
+                                width : 1,
+                            },
+                        },
+                    },
+                    symbol: 'none',
+                },
+            ];
+		}
+		
+		
+		//$("#id_modal_common_body").children().remove();
+		var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+		options = {
+			title : {
+                    text: sDevIp,
+                    //subtext: sSubMsg,
+                    textStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+                    subtextStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+			},
+			tooltip : {
+                trigger: 'axis'
+            },
+            legend: {
+                data:aTag,
+                //data:aTag,
+            },
+            toolbox: {
+                show : true,
+                feature : {
+                    mark : {show: true},
+                    dataView : {show: true, readOnly: false},
+                    magicType : {show: true, type: ['line', 'bar']},
+                    restore : {show: true},
+                    saveAsImage : {show: true}
+                }
+            },
+            calculable : true,
+            xAxis : [
+                {
+                    type : 'category',
+                    boundaryGap : false,
+                    data : aTime,
+                }
+            ],
+            yAxis : [
+                {
+                    type : 'value',
+                    axisLabel : {
+                        formatter: '{value} ' + '个/分',
+                    }
+                }
+            ],
+            series : aSeries,
+		};
+		MyChart.setOption(options);
+		
+		//重新变更图大小
+		window.onresize = MyChart.resize;
+		
+		$("#id_div_mainPie").css('visibility','visible');
+		
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+
+

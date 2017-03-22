@@ -1,0 +1,20 @@
+{% extends "common/base.side.html" %}
+
+{% block rcontent %}
+<div class="btn-toolbar">
+	<div class="btn-group">
+		{% url "main_page_url" as the_main_page_url %}
+		{% url "net_seg_page_url" as the_net_seg_page_url %}
+		{% url "ip_page_url" as the_ip_page_url %}
+		{% url "proc_page_url" as the_proc_page_url %}
+		{% url "dev_page_url" as the_dev_page_url %}
+		<a class="btn btn-default {%if request.path = the_main_page_url %} active {%endif%}" href={{ the_main_page_url }}><span class="glyphicon glyphicon-list"></span>全局总览</a>
+		<a class="btn btn-default {%if request.path = the_net_seg_page_url %} active {%endif%}" href={{ the_net_seg_page_url }}><span class="glyphicon glyphicon-list"></span>网段信息</a>
+		<a class="btn btn-default {% if request.path = the_ip_page_url %} active {% endif %}" href={{ the_ip_page_url }}><span class="glyphicon glyphicon-list"></span>IP信息</a>
+		<a class="btn btn-default {% if request.path = the_proc_page_url %} active {% endif %}" href={{ the_proc_page_url }}><span class="glyphicon glyphicon-list"></span>进程信息</a>
+		<a class="btn btn-default {%if request.path = the_dev_page_url %} active {%endif%}" href={{ the_dev_page_url }}><span class="glyphicon glyphicon-list"></span>设备信息</a>
+	</div>
+</div>
+<hr/>
+{% block subcontent %}{% endblock %}
+{% endblock %}

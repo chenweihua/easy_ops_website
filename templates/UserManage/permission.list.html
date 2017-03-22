@@ -1,0 +1,105 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+    Permission List
+{% endblock %}
+
+{% block rcontent %}
+    <div class="btn-toolbar">
+        <div class="btn-group">
+            {% url "addpermissionurl" as theaddpermissionurl %}
+            <a class="btn btn-default {%if request.path = theaddpermissionurl%} active {%endif%}" href={{ theaddpermissionurl }}><span class="glyphicon glyphicon-edit"></span>新建权限</a>
+            {% url "listpermissionurl" as thelistpermissionurl %}
+            <a class="btn btn-default {%if request.path = thelistpermissionurl%} active {%endif%}" href={{ thelistpermissionurl }}><span class="glyphicon glyphicon-list"></span>权限列表</a>
+        </div>
+    </div>
+
+    <hr/>
+
+    <table class="table table-hover table-striped  table-bordered table-condensed">
+        <tr>
+            <th>权限名称</th>
+            <th>URL</th>
+            <th>操作</th>
+        </tr>
+
+        {% for i in lPage %}
+            <tr style="font-size: 13px;">
+                <td>{{ i.name }}</td>
+                <td>{{ i.url }}</td>
+
+				<td class="host_buttom">				
+					<a class="btn btn-warning btn-xs"  onclick="EditPromission('{{i.id}}')">编辑</a>
+					<a class="btn btn-danger btn-xs" href={% url "deletepermissionurl" i.id %} onclick="return confirm('是否确认删除？')">删除</a>
+				</td>
+
+            </tr>
+        {% endfor %}
+
+    </table>
+	
+	<!-- modal -->
+	<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 class="modal-title">编辑权限信息</h4>
+				</div>
+				<div class="modal-body" id="id_modal_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="EditUserSubmit()">编辑</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+		$(function(){
+			ProProcess();
+		});
+		
+		function ProProcess(){
+			/*
+			*预处理函数
+			*/
+			//说明表头字段
+			$('[data-toggle=tooltip]').tooltip();
+			
+			//modal拖动
+			$("#id_modal_edit").draggable({
+				handle:".modal-header",
+				cursor:"move",
+				refreshPositions:false,
+			});
+		}
+		
+		function EditPromission(UserId){
+			if(! confirm('确认编辑吗？')){
+				return;
+			}
+			$("#id_modal_body").children().remove();
+			
+			var Url = "{% url 'editpermissionurl' 999%}";
+			Url = Url.replace('999',UserId);
+			$.ajax({
+				type:"GET",
+				url:Url,
+				success:function(data){
+					
+					$("#id_modal_body").append(data);
+					$("#id_modal_edit").modal();
+				},
+			});
+		}
+		
+		function EditPromissionSubmit(){
+			$("#id_form_promission_edit").submit();
+		}
+	
+	</script>
+	
+	
+    {% include "common/paginator.html" %}
+{% endblock %}

@@ -1,0 +1,208 @@
+{% extends "InteranetDetect/intnetdet_common.html" %}
+
+{% block title %}
+	NetSeg Page
+{% endblock %}
+
+{% block subcontent %}
+<form class="form-inline" role="form">
+   <div class="form-group">
+      <input type="text" class="form-control" id="name" placeholder="请输入网段IP" oninput="QueryFunction(this.value)">
+   </div>
+</form>
+</br>
+<div id="id_div_query_table"></div>
+
+<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h4 class="modal-title">更改探测操作</h4>
+			</div>
+			<div class="modal-body" id="id_modal_edit_body">
+				<form action="#" id="id_form_edit" class="form-horizontal" role="form">
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				<button class="btn btn-primary" type="button" onclick="EditTaskSubmit()">提交</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+<script>
+	$(function(){
+		//全局变量
+		var aDevIp = [];
+		
+		ProProcess();
+		QueryFunction('get_all'); //默认获取全部信息
+	});
+	
+	//----------------------------------
+		
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_edit").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});
+	}
+
+	function QueryFunction(sIp){
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "query_net_seg_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				query_ip:sIp,
+			},
+			//async:false,
+			success:function(data){
+				$("id_div_query_table").children().remove();
+				
+				//console.log(data);
+				var aNetSeg = data['ldata'];
+				//console.log(aNetSeg);
+				aDevIp = data['ldev'];
+				
+				$("#id_div_query_table").children().remove();
+				var MyTaskGrid = new bbGrid.View({        
+					container: $('#id_div_query_table'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aNetSeg),
+					rows:20,
+					rowList: [20,40,80],
+					//'insert_time','id','network_segment','mask','dev_ip','ipcnt','using_ipcnt','det_type','opt_type'
+					colModel: [
+						{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+						{ title: '网段ID', name: 'id',index: true,sorttype: 'number' }, 
+						{ title: '网段', name: 'network_segment',index: true,sorttype: 'string' }, 
+						{ title: '掩码', name: 'mask',index: true,sorttype: 'string' }, 
+						{ title: '探测设备', name: 'dev_ip',index: true,sorttype: 'string' }, 
+						{ title: '网段IP数', name: 'ipcnt',index: true,sorttype: 'number' }, 
+						{ title: '启用IP数', name: 'using_ipcnt',index: true,sorttype: 'number' }, 
+						{ title: '探测类型', name: 'det_type',index: true,sorttype: 'string' }, 
+						{ title: '探测状态', name: 'opt_type',index: true,sorttype: 'string' }, 
+					],
+					buttons:[
+						{
+							title:"编辑",
+							onClick:function(){
+								//console.log('this',this);
+								EditModels(this.getSelectedModels());
+							},
+						},
+					],
+				});
+			}	
+		});
+	}
+	
+	
+	function EditModels(Models){		
+		if (_.isEmpty(Models)){
+			alert('请选择要编辑的列');
+			return;
+		}
+		//画出编辑modal
+		//alert(_.first(Models).get('network_segment'));
+		var sNetId = _.first(Models).get('id');
+		var sNetSeg = _.first(Models).get('network_segment');
+		var sMask = _.first(Models).get('mask');
+		var sDevIp = _.first(Models).get('dev_ip');
+		var sDetType = _.first(Models).get('det_type');
+		var sOptType = _.first(Models).get('opt_type');
+		
+		var aDetType = ['ping','all'];
+		var aOptType = ['start','stop'];
+		//var sDevRet = CreateSelect('dev_ip',sDevIp,aDevIp);
+		var sDetTypeRet = CreateSelect('det_type',sDetType,aDetType);
+		var sOptTypeRet = CreateSelect('opt_type',sOptType,aOptType);
+		
+		
+		$("#id_form_edit div").remove();
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">网段ID</label><div class="col-md-5"><input id="id_id" type="text" class="form-control" disabled="disabled" value="' + sNetId + '"/></div></div>'));
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">网段</label><div class="col-md-5"><input id="id_network_segment" type="text" class="form-control" disabled="disabled" value="' + sNetSeg + '"/></div></div>'));
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">掩码</label><div class="col-md-5"><input id="id_mask" type="text" class="form-control" disabled="disabled" value="' + sMask + '"/></div></div>'));
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">探测设备</label><div class="col-md-5"><input id="id_dev_ip" type="text" class="form-control" disabled="disabled" value="' + sDevIp + '"/></div></div>'));
+		//$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">探测设备</label><div class="col-md-5">' + sDevRet + '</div></div>'));
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">探测类型</label><div class="col-md-5">' + sDetTypeRet + '</div></div>'));
+		$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-2">探测状态</label><div class="col-md-5">' + sOptTypeRet + '</div></div>'));
+
+		$("#id_modal_edit").modal();
+	}
+	
+	function CreateSelect(sName,sStr,aArr){
+		//将数组中内容拼装成option字段，返回。sStr为selected部分
+		//console.log(aArr);
+		var sOpt = '<option value="'+ sStr +'" selected>' + sStr + '</option>';
+		for(var i in aArr){
+			var sData = '';
+			
+			if(sName == 'dev_ip'){
+				sData = aArr[i]['dev_ip'];
+			}
+			else{
+				sData = aArr[i];
+			}
+			
+			if(sData == sStr){
+				continue;
+			}
+			if(sName == 'det_type'){
+				//暂时屏蔽其它类型的探测方式（由于只做了ping功能。。）
+				sOpt += '<option value="'+ sData +'" disabled="disabled" >' + sData + '</option>';
+			}
+			else{
+				sOpt += '<option value="'+ sData +'" >' + sData + '</option>';
+			}
+		}
+		return sRet = '<select id="id_' + sName + '" class="form-control">' + sOpt + '</select>';
+	}
+
+	
+	function EditTaskSubmit(){
+		
+		//不直接调用submit了（post过去的表单信息为空），用ajax提交表单
+		//$("#id_form_edit").submit();
+
+		$.ajax({
+				type:"POST",
+				url:'{% url "edit_net_seg_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					id_id:$("#id_id").val(),
+					id_network_segment:$("#id_network_segment").val(),
+					id_mask:$("#id_mask").val(),
+					id_dev_ip:$("#id_dev_ip").val(),
+					id_det_type:$("#id_det_type").val(),
+					id_opt_type:$("#id_opt_type").val(),
+				},
+				success:function(data){
+					//console.log(data);
+					window.location.href = '{% url "net_seg_page_url" %}';
+				}
+			});
+		
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+
+

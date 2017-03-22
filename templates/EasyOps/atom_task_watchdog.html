@@ -1,0 +1,230 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+	Atom Watchdog TaskInfo
+{% endblock %}
+
+{% block rcontent %}
+	<div class="btn-toolbar">
+		<div class="btn-group">
+			{% url "task_watchdogurl" as thetask_watchdogurl %}
+			{% url "atom_task_watchdogurl" as the_atom_task_watchdogurl %}
+			{% url "realtime_task_watchdogurl" as the_realtime_task_watchdogurl %}
+			<a class="btn btn-default {%if request.path = thetask_watchdogurl or pro_flag = '0' %} active {%endif%}" href={{ thetask_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置定时备份工具</a>
+			<a class="btn btn-default {%if request.path = the_realtime_task_watchdogurl or pro_flag = '1' %} active {%endif%}" href={{ the_realtime_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置实时维护工具</a>
+			<a class="btn btn-default {% if request.path = the_atom_task_watchdogurl %} active {% endif %}" href={{ the_atom_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>原子任务管理</a>
+		</div>
+	</div>
+	<hr/>
+	
+	<table id="id_table_1" class="table table-hover">
+		<tr>
+			<td class="host_buttom">
+				<a class="btn btn-danger btn-xs" data-toggle="modal" data-target="#id_modal_add">新增</a>
+			</td>
+			<td class="host_buttom">
+				<a class="btn btn-warning btn-xs" onclick = "SelAtomTask()">预留</a>
+			</td>
+		</tr>
+	</table>
+	
+	<div id="id_modal_add" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 class="modal-title">新增原子命令</h4>
+				</div>
+				<div class="modal-body">
+					<form id="id_form_add" action={% url "add_atom_task_watchdogurl" %} class="form-horizontal" role="form" method="POST">
+						{% csrf_token %}
+						{% for item in form %}
+							<div class="form-group">
+								{% if item.label != 'Operator' and item.label != 'Del flag' and item.label != 'Task interval'%}
+									<label class="control-label col-md-1">{{item.label}}</label>
+									<div class="col-md-2">
+										{{item}}
+									</div>
+									<div class="col-md-offset-1 col-md-10">
+										{{item.errors}}
+									</div>
+								{% endif %}
+							</div>
+						{% endfor %}
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="AddAtomTask()">提交</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	
+	
+	<table class="table table-hover table-striped table-bordered table-condensed" style="table-layout:fixed;word-break:break-all">
+		<tr>
+			<th>插入时间</th>
+			<th>任务ID</th>
+			<th>任务</th>
+			<th>说明</th>
+			<th>用户</th>			
+			<th>操作</th>
+		</tr>
+
+		{% for i in lPage %}
+			<tr style="font-size: 13px;">
+				<td>{{ i.insert_time|date:"Y-m-d H:i:s" }}</td>
+				<td>{{ i.id }}</td>
+				<td>{{ i.task }}</td>
+				<td>{{ i.task_info }}</td>
+				<td>{{ i.operator }}</td>
+				<td class="host_buttom">
+					<a class="btn btn-warning btn-xs" onclick="EditAtomTask( {{i.id}},'{{i.task|addslashes}}','{{i.task_info|addslashes}}' );" >编辑</a>
+					<a class="btn btn-danger btn-xs" onclick="DelAtomTask( {{i.id}} )">删除</a>
+				</td>
+			</tr>
+		{% endfor %}
+	</table>
+	
+	<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title">编辑原子命令</h4>
+				</div>
+				<div class="modal-body">
+					<form action={% url "edit_atom_task_watchdogurl" %} id="id_form_edit" class="form-horizontal" role="form" method="POST">
+						{% csrf_token %}
+						
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="UpdateEditAtomTask()">编辑</button>
+				</div>
+			</div>
+		</div>
+	</div>
+		
+		
+	<script>
+		
+		$(function(){
+			ProProcess();
+		})
+		
+		//----------------------------------
+		
+		function ProProcess(){
+			/*
+			*预处理函数
+			*/
+			//说明表头字段
+			$('[data-toggle=tooltip]').tooltip();
+			
+			//modal拖动
+			$("#id_modal_add").draggable({
+				handle:".modal-header",
+				cursor:"move",
+				refreshPositions:false,
+			});
+			
+			//modal居中（暂时不用）
+			/*
+			$("#id_modal_add").on('show.bs.modal',function(){ //调用show时触发
+				//var $this = $(this);
+				var $Modal = $(this).find(".modal-dialog");
+				//alert($Modal);
+				var iTop = ($(document).height() - $Modal.height())/2;
+				//alert(iTop);
+				$Modal.css({'margin':iTop + 'px auto'});
+				
+			});
+			*/
+			
+			//form中textra的宽高
+			$("#id_form_add textarea").attr({
+				"style":"width:400px;height:100px;",
+			});
+			
+			
+		}
+		
+		function CenterModals(){
+			
+		}
+		
+		function AddAtomTask(){
+			//提交原子命令操作
+			
+			var aRet = JudgeTask($("form#id_form_add #id_task").val());
+			if (aRet){
+				alert("输入内容包含危险操作（" + aRet[2] + "），请更正后提交");
+			}
+			else{
+				if($("form#id_form_add #id_task").val()){
+					if(!$("form#id_form_add #id_task_info").val()){
+						$("form#id_form_add #id_task_info").val('none');
+					}
+					$("#id_form_add").submit();
+				}				
+			}			
+		}
+		
+		function EditAtomTask(iId,sTask,sTaskInfo){
+			if(! confirm('确认编辑吗？')){
+				return;
+			}
+			//清除
+			$("#id_form_edit div").remove();
+			
+			//填充
+			$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-1">任务</label><div class="col-md-2"><textarea class="form-control" cols="40" id="id_task" name="task" rows="10" style="width:400px;height:100px;">' + sTask + '</textarea></div></div>'));
+			$("#id_form_edit").append($('<div class="form-group"><label class="control-label col-md-1">说明</label><div class="col-md-2"><textarea class="form-control" cols="40" id="id_task_info" name="task_info" rows="10" style="width:400px;height:100px;">' + sTaskInfo + '</textarea></div></div>'));
+			$("#id_form_edit").append($('<div class="form-group" style="display:none"><label class="control-label col-md-1">ID</label><div class="col-md-2"><textarea class="form-control" cols="40" id="id" name="id" rows="10" style="width:400px;height:100px;">' + iId + '</textarea></div></div>'));
+
+			$("#id_modal_edit").modal();
+		}
+		
+		function UpdateEditAtomTask(){
+			var aRet = JudgeTask($("form#id_form_edit #id_task").val());
+			if (aRet){
+				alert("输入内容包含危险操作（" + aRet[2] + "），请更正后提交");
+			}
+			else{
+				if($("form#id_form_edit #id_task").val()){
+					if(!$("form#id_form_edit #id_task_info").val()){
+						$("form#id_form_edit #id_task_info").val('none');
+					}
+					$("#id_form_edit").submit();
+				}				
+			}
+		}
+		
+		
+		function SelAtomTask(){
+			
+		}
+		
+		function DelAtomTask(iId){
+			if(! confirm('确认删除吗？')){
+				return;
+			}
+			window.location.href = "/easyops/del_atom_task_watchdog/" + iId;
+		}
+		
+		function JudgeTask(Task){
+			//console.log(Task);
+			var re = /(\s|;|\|)(mv|rm|cp|kill|)\s+/g;
+			var aRet = re.exec(Task);
+			return aRet;
+		}
+		
+	</script>
+	{% include "common/paginator.html" %}
+
+
+{% endblock %}

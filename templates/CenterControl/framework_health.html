@@ -1,0 +1,235 @@
+{% extends "CenterControl/center_control_common.html" %}
+
+{% block title %}
+	Framework Health
+{% endblock %}
+
+{% block subcontent %}
+<div id="id_div_table"></div>
+<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px; visibility:hidden"></div>
+
+
+
+<script>
+	var oData = {};
+	var aTable = [];
+	$(function(){
+		QueryFunction(); //默认获取全部信息
+		getTable();
+	});
+	
+	//----------------------------------
+		
+	function QueryFunction(){
+		$.ajax({
+			type:"POST",
+			url:'{% url "framework_health_get_data_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+			},
+			async:false,
+			success:function(data){
+				console.log(data);
+				
+				/*
+				将数据拆分
+				type: devip + dev_type(controler|probe) ->
+										insert_time arr
+										'recv_cnt',
+										'send_cnt',
+										'log_mq',
+										'netio_recv_mq',
+										'netio_send_mq',
+										'api_recv_mq',
+										'data_proc_recv_mq'
+				*/
+				var oTable = {};
+				
+				for (var i in data){
+					dev_ip = data[i]['dev_ip'];
+					dev_type = data[i]['dev_type'];
+					sKey = dev_ip + '_' + dev_type;
+					if (oData[sKey]){
+						oData[sKey]['insert_time'].push(data[i]['insert_time']);
+						oData[sKey]['recv_cnt'].push(data[i]['recv_cnt']);
+						oData[sKey]['send_cnt'].push(data[i]['send_cnt']);
+						oData[sKey]['log_mq'].push(data[i]['log_mq']);
+						oData[sKey]['netio_recv_mq'].push(data[i]['netio_recv_mq']);
+						oData[sKey]['netio_send_mq'].push(data[i]['netio_send_mq']);
+						oData[sKey]['api_recv_mq'].push(data[i]['api_recv_mq']);
+						oData[sKey]['data_proc_recv_mq'].push(data[i]['data_proc_recv_mq']);
+					}
+					else{
+						oData[sKey] = {
+							'insert_time' : [data[i]['insert_time']],
+							'recv_cnt' : [data[i]['recv_cnt']],
+							'send_cnt' : [data[i]['send_cnt']],
+							'log_mq' : [data[i]['log_mq']],
+							'netio_recv_mq' : [data[i]['netio_recv_mq']],
+							'netio_send_mq' : [data[i]['netio_send_mq']],
+							'api_recv_mq' : [data[i]['api_recv_mq']],
+							'data_proc_recv_mq' : [data[i]['data_proc_recv_mq']],
+						};
+					}
+					
+					oTable[sKey] = data[i];
+				}
+				
+				console.log(oData);
+				console.log(oTable);
+				
+				var iId = 0;
+				for (sKey in oTable){
+					oTable[sKey]['id'] = iId;
+					aTable.push(oTable[sKey]);
+					iId++;
+				}
+				console.log(aTable);
+				
+			}
+		})
+	}	
+
+	function getTable(){
+		$("#id_div_table").children().remove();
+		var MyTaskGrid = new bbGrid.View({        
+			container: $('#id_div_table'),
+			enableSearch: true,
+			collection:  new Backbone.Collection(aTable),
+			rows:20,
+			rowList: [20,40,80],
+			colModel: [
+				{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+				{ title: 'IP', name: 'dev_ip',index: true,sorttype: 'string' }, 
+				{ title: '类型', name: 'dev_type',index: true,sorttype: 'string' }, 
+				{ title: '收包数/分', name: 'recv_cnt',index: true,sorttype: 'number' }, 
+				{ title: '发包数/分', name: 'send_cnt',index: true,sorttype: 'number' }, 
+				{ title: '日志队列', name: 'log_mq',index: true,sorttype: 'number' },
+				{ title: '网络IO收队列', name: 'netio_recv_mq',index: true,sorttype: 'string' },
+				{ title: '网络IO发队列', name: 'netio_send_mq',index: true,sorttype: 'string' },
+				{ title: 'API收队列', name: 'api_recv_mq',index: true,sorttype: 'string' },
+				{ title: '数据处理收队列', name: 'data_proc_recv_mq',index: true,sorttype: 'string' },
+			],
+			buttons:[
+				{
+					title:"查看",
+					onClick:function(){
+						getGraph(this.getSelectedModels());
+					},
+				},
+			],
+		});
+	}
+	
+	function getSeries(sName,aData){
+		return {
+			name:sName,
+			type:'line',
+			data:aData,
+			markPoint : {
+				data : [
+					{type : 'max', name: '最大值',symbol: 'none'},
+					{type : 'min', name: '最小值',symbol: 'none'},
+				],
+			},
+			itemStyle : {
+				normal : {
+					lineStyle : {
+						//color:'#c23531',
+						width : 1,
+					},
+				},
+			},
+			symbol: 'none',
+		};
+	}
+	
+	function getGraph(Models){
+		if (_.isEmpty(Models)){
+			alert('请选择要查询的列');
+			return;
+		}
+		var sDevIp = _.first(Models).get('dev_ip');
+		var sDevType = _.first(Models).get('dev_type');
+		var sKey = sDevIp + '_' + sDevType;
+		console.log(sKey);
+
+		var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列'];
+		var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq'];
+		var aTime = oData[sKey]['insert_time'];
+		var aSeries = [];
+		for (var i = 0; i < aTag.length; i++){
+			console.log(i);
+			aSeries.push(getSeries(aTag[i],oData[sKey][aFlag[i]]));
+		}
+		console.log(aSeries);
+		
+		
+		var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+		options = {
+			title : {
+                    text: sDevIp,
+                    subtext: sDevType,
+                    textStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+                    subtextStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+			},
+			tooltip : {
+                trigger: 'axis'
+            },
+            legend: {
+                data:aTag,
+                //data:aTag,
+            },
+            toolbox: {
+                show : true,
+                feature : {
+                    mark : {show: true},
+                    dataView : {show: true, readOnly: false},
+                    magicType : {show: true, type: ['line', 'bar']},
+                    restore : {show: true},
+                    saveAsImage : {show: true}
+                }
+            },
+            calculable : true,
+            xAxis : [
+                {
+                    type : 'category',
+                    boundaryGap : false,
+                    data : aTime,
+                }
+            ],
+            yAxis : [
+                {
+                    type : 'value',
+                    axisLabel : {
+                        formatter: '{value} ' + '个/分',
+                    }
+                }
+            ],
+            series : aSeries,
+		};
+		MyChart.setOption(options);
+		
+		//重新变更图大小
+		window.onresize = MyChart.resize;
+		
+		$("#id_div_mainPie").css('visibility','visible');
+		
+		
+		
+		
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+
+

@@ -1,0 +1,277 @@
+{% extends "InteranetDetect/intnetdet_common.html" %}
+
+{% block title %}
+	Main Page
+{% endblock %}
+
+{% block subcontent %}
+<div class="jumbotron">
+  <h3 id="id_h3_main_text"></h3>
+</div>
+
+<ul id="myTab" class="nav nav-tabs">
+   <li><a href="#id_graph_1" data-toggle="tab" onclick="ShowGraph('net_seg')">监控网段信息</a></li>
+   <li class="active"><a href="#id_graph_2" data-toggle="tab" onclick="ShowGraph('ip')">监控IP信息</a></li>
+</ul>
+<div id="myTabContent" class="tab-content">
+   <div class="tab-pane fade in active" id="id_graph_1">
+		
+   </div>
+   <div class="tab-pane fade" id="id_graph_2">
+		
+   </div>   
+</div>
+<div id="id_div_mainPie_1" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
+
+
+
+
+
+
+
+<script>
+	var gData = {};
+	$(function(){		
+		ProProcess();
+		QueryFunction(); //默认获取全部信息
+	});
+	
+	//----------------------------------
+		
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+	}
+	
+	function QueryFunction(){
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "query_main_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+			},
+			//async:false,
+			success:function(data){
+				//console.log(data);
+				var myDate = new Date()
+				var sDate = myDate.getFullYear()+ '年' + (myDate.getMonth() + 1) + '月' + myDate.getDate() + '日';
+				$("#id_h3_main_text").html("截止" + '<span style="color:red">' + sDate + '</span>' + "，系统共部署探测设备" + '<span style="color:red">' + data['dev_cnt'] + '</span>' +"台，接入监控网段"  + '<span style="color:red">' + data['net_seg_cnt'] + '</span>' + "个，监控IP"  + '<span style="color:red">' + data['ip_cnt']  + '</span>' + "个。");
+				
+				var aNetSeg = [
+					{'name':'探测中','value':data['net_seg_start_cnt']},
+					{'name':'未探测','value':data['net_seg_cnt'] - data['net_seg_start_cnt']},					
+				];
+				
+				var aIp = [
+					{'name':'已启用','value':data['ip_ret_cnt']},
+					{'name':'未启用','value':data['ip_start_cnt'] - data['ip_ret_cnt']},
+				];
+				
+				gData['net_seg'] = aNetSeg;
+				gData['ip'] = aIp;
+				
+				options = {
+					title : {
+						text: '监控网段信息',
+						x:'center',
+						textStyle:{
+						fontFamily: '微软雅黑'
+						}
+					},
+					tooltip : {
+						trigger: 'item',
+						formatter: "{a} <br/>{b} : {c} ({d}%)"
+					},
+					legend: {
+						orient : 'vertical',
+						x : 'left',
+						textStyle:{
+						fontFamily: '微软雅黑'
+						},
+						//data:['直接访问','邮件营销','联盟广告','视频广告','搜索引擎']
+						data:['探测中','未探测'],
+					},
+					toolbox: {
+						show : true,
+						feature : {
+							mark : {show: true},
+							dataView : {show: true, readOnly: false},
+							magicType : {
+								show: true, 
+								type: ['pie', 'funnel'],
+								option: {
+									funnel: {
+										x: '25%',
+										width: '50%',
+										funnelAlign: 'left',
+										max: 1548
+									}
+								}
+							},
+							restore : {show: true},
+							saveAsImage : {show: true}
+						}
+					},
+					calculable : true,
+					series : [
+						{
+							name:'状态',
+							type:'pie',
+							radius : '55%',
+							center: ['50%', '60%'],
+							itemStyle:{
+							normal:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},
+							emphasis:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},                    
+							},
+							data:aNetSeg,
+						}
+					]
+				};
+				
+				var MyChart = echarts.init(document.getElementById('id_div_mainPie_1'));
+				MyChart.setOption(options);
+				window.onresize = MyChart.resize;
+			}	
+		});
+	}
+
+	
+	function ShowGraph(sFlag){
+		
+		if(sFlag == 'ip'){
+			var aIp = gData['ip'];
+			var options = {
+				title : {
+					text: '监控IP信息',
+					x:'center',
+					textStyle:{
+					fontFamily: '微软雅黑'
+					}
+				},
+				tooltip : {
+					trigger: 'item',
+					formatter: "{a} <br/>{b} : {c} ({d}%)"
+				},
+				legend: {
+					orient : 'vertical',
+					x : 'left',
+					textStyle:{
+					fontFamily: '微软雅黑'
+					},
+					//data:['直接访问','邮件营销','联盟广告','视频广告','搜索引擎']
+					data:['已启用','未启用'],
+				},
+				toolbox: {
+					show : true,
+					feature : {
+						mark : {show: true},
+						dataView : {show: true, readOnly: false},
+						magicType : {
+							show: true, 
+							type: ['pie', 'funnel'],
+							option: {
+								funnel: {
+									x: '25%',
+									width: '50%',
+									funnelAlign: 'left',
+									max: 1548
+								}
+							}
+						},
+						restore : {show: true},
+						saveAsImage : {show: true}
+					}
+				},
+				calculable : true,
+				series : [
+					{
+						name:'状态',
+						type:'pie',
+						radius : '55%',
+						center: ['50%', '60%'],
+						itemStyle:{
+						normal:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},
+						emphasis:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},                    
+						},
+						data:aIp,
+					}
+				]
+			};
+			
+			var MyChart = echarts.init(document.getElementById('id_div_mainPie_1'));
+			MyChart.setOption(options);
+			window.onresize = MyChart.resize;
+		}
+		else if(sFlag == 'net_seg'){
+			var aNetSeg = gData[sFlag];
+			
+			options = {
+				title : {
+					text: '监控网段信息',
+					x:'center',
+					textStyle:{
+					fontFamily: '微软雅黑'
+					}
+				},
+				tooltip : {
+					trigger: 'item',
+					formatter: "{a} <br/>{b} : {c} ({d}%)"
+				},
+				legend: {
+					orient : 'vertical',
+					x : 'left',
+					textStyle:{
+					fontFamily: '微软雅黑'
+					},
+					//data:['直接访问','邮件营销','联盟广告','视频广告','搜索引擎']
+					data:['探测中','未探测'],
+				},
+				toolbox: {
+					show : true,
+					feature : {
+						mark : {show: true},
+						dataView : {show: true, readOnly: false},
+						magicType : {
+							show: true, 
+							type: ['pie', 'funnel'],
+							option: {
+								funnel: {
+									x: '25%',
+									width: '50%',
+									funnelAlign: 'left',
+									max: 1548
+								}
+							}
+						},
+						restore : {show: true},
+						saveAsImage : {show: true}
+					}
+				},
+				calculable : true,
+				series : [
+					{
+						name:'状态',
+						type:'pie',
+						radius : '55%',
+						center: ['50%', '60%'],
+						itemStyle:{
+						normal:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},
+						emphasis:{label:{show:true,textStyle:{fontFamily:'微软雅黑'}}},                    
+						},
+						data:aNetSeg,
+					}
+				]
+			};
+			
+			var MyChart = echarts.init(document.getElementById('id_div_mainPie_1'));
+			MyChart.setOption(options);
+			window.onresize = MyChart.resize;			
+		}
+	}
+</script>
+
+{% endblock %}
+

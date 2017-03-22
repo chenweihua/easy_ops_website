@@ -1,0 +1,103 @@
+{% extends "InteranetDetect/sw_common.html" %}
+
+{% block title %}
+	Switch Page
+{% endblock %}
+
+{% block subcontent %}
+<div class="main_cont">
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			
+		</ul>
+	</div>
+	</br>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= "/intnetdet/sw_get_access_log_data/none/empty_flag/"
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-page-size="25"
+			data-sort-name="update_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="update_time" data-sortable="true">插入时间</th>
+			<th data-field="switch_ip" data-sortable="true">交换机</th>
+			<th data-field="proc_status" data-sortable="true">探测状态</th>
+		</tr>
+		</thead>
+	</table>
+	
+	
+</div>
+
+
+<script type="text/javascript">
+	var $table = $('#table');
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();	
+	});
+	
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/intnetdet/sw_get_access_log_data/none/' + sSearchVal + '/',
+		});
+	}
+	
+</script>
+
+
+{% endblock %}
+

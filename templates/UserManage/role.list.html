@@ -1,0 +1,110 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+    Role List
+{% endblock %}
+
+{% block rcontent %}
+    <div class="btn-toolbar">
+        <div class="btn-group">
+            {% url "addroleurl" as theaddroleurl %}
+            <a class="btn btn-default {%if request.path = theaddroleurl%} active {%endif%}" href={{ theaddroleurl }}><span class="glyphicon glyphicon-edit"></span>新建角色</a>
+            {% url "listroleurl" as thelistroleurl %}
+            <a class="btn btn-default {%if request.path = thelistroleurl%} active {%endif%}" href={{ thelistroleurl }}><span class="glyphicon glyphicon-list"></span>角色列表</a>
+        </div>
+    </div>
+
+    <hr/>
+
+    <table class="table table-hover table-striped  table-bordered table-condensed">
+        <tr>
+            <th>角色名称</th>
+            <th>操作</th>
+        </tr>
+
+        {% for i in lPage %}
+            <tr style="font-size: 13px;">
+                <td>{{ i.name }} </td>
+
+                <td >
+                    <a class="btn btn-warning btn-xs" onclick="EditRole('{{i.id}}')">编辑</a>
+                    <a class="btn btn-danger btn-xs" href={% url "deleteroleurl" i.id %} onclick="return confirm('确认删除角色吗？？')">删除</a>
+                </td>
+            </tr>
+        {% endfor %}
+
+    </table>
+	
+	<!-- modal -->
+	<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 class="modal-title">编辑角色信息</h4>
+				</div>
+				<div class="modal-body" id="id_modal_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="EditRoleSubmit()">编辑</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+		$(function(){
+			ProProcess();
+		});
+		
+		function ProProcess(){
+			/*
+			*预处理函数
+			*/
+			//说明表头字段
+			$('[data-toggle=tooltip]').tooltip();
+			
+			//modal拖动
+			$("#id_modal_edit").draggable({
+				handle:".modal-header",
+				cursor:"move",
+				refreshPositions:false,
+			});
+		}
+		
+		function EditRole(RuleId){
+			if(! confirm('确认编辑吗？')){
+				return;
+			}
+			$("#id_modal_body").children().remove();
+			
+			var Url = "{% url 'editroleurl' 999%}";
+			Url = Url.replace('999',RuleId);
+			$.ajax({
+				type:"GET",
+				url:Url,
+				success:function(data){
+					//console.log(data);
+					$("#id_modal_body").append(data);
+					
+					$('#id_form_role_edit select[name="permission"]').bootstrapDualListbox({
+						  nonSelectedListLabel: '可选择权限',
+						  selectedListLabel: '已选择权限',
+						  preserveSelectionOnMove: 'moved',
+						  moveOnSelect: false,
+					});
+					
+					$("#id_modal_edit").modal();
+				},
+			});
+		}
+		
+		function EditRoleSubmit(){
+			$("#id_form_role_edit").submit();
+		}
+	
+	</script>
+	
+	
+    {% include "common/paginator.html" %}
+{% endblock %}

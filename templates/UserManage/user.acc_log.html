@@ -1,0 +1,119 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+	AccLog Page
+{% endblock %}
+
+{% block rcontent %}
+<div class="btn-toolbar">
+	<div class="btn-group">
+		{% url "adduserurl" as theadduserurl %}
+		<a class="btn btn-default {%if request.path = theadduserurl%} active {%endif%}" href={{ theadduserurl }}><span class="glyphicon glyphicon-edit"></span>新建用户</a>
+		{% url "listuserurl" as thelistuserurl %}
+		<a class="btn btn-default {%if request.path = thelistuserurl%} active {%endif%}" href={{ thelistuserurl }}><span class="glyphicon glyphicon-list"></span>用户列表</a>
+		{% url "acc_log_url" as the_acc_log_url %}
+		<a class="btn btn-default {%if request.path = the_acc_log_url%} active {%endif%}" href={{ the_acc_log_url }}><span class="glyphicon glyphicon-list"></span>访问日志</a>
+	</div>
+</div>
+
+    <hr/>
+
+<div class="main_cont">
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>			
+		</ul>
+	</div>
+	</br>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= "/accounts/user/get_acc_log/empty_flag/"
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-page-size="25"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">插入时间</th>			
+			<th data-field="username" data-sortable="true">用户</th>
+			<th data-field="remote_addr" data-sortable="true">源IP</th>
+			<th data-field="method" data-sortable="true">请求</th>
+			<th data-field="url" data-sortable="true">链接</th>
+			<th data-field="info" data-sortable="true">内容</th>			
+		</tr>
+		</thead>
+	</table>
+</div>
+
+
+<script type="text/javascript">
+	var $table = $('#table');
+	var gViewFlag = 'using';
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();	
+	});
+	
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/accounts/user/get_acc_log/' + sSearchVal + '/',
+		});
+	}
+	
+	
+	
+</script>
+
+
+{% endblock %}
+

@@ -1,0 +1,75 @@
+{% extends "InteranetDetect/intnetdet_common.html" %}
+
+{% block title %}
+	Ip Page
+{% endblock %}
+
+{% block subcontent %}
+<form class="form-inline" role="form">
+   <div class="form-group">
+      <input type="text" class="form-control" id="name" placeholder="请输入IP" oninput="QueryFunction(this.value)">
+   </div>
+</form>
+</br>
+<div id="id_div_query_table"></div>
+
+
+
+<script>
+	$(function(){
+		
+		ProProcess();
+		QueryFunction('get_all'); //默认获取全部信息
+	});
+	
+	//----------------------------------
+		
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+	}
+
+	function QueryFunction(sIp){
+		console.log(sIp);
+		$.ajax({
+			type:"POST",
+			url:'{% url "query_ip_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				query_ip:sIp,
+			},
+			//async:false,
+			success:function(data){
+				var aIp = data['ldata'];
+				//console.log(aIp);
+				
+				$("#id_div_query_table").children().remove();
+				var MyTaskGrid = new bbGrid.View({        
+					container: $('#id_div_query_table'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aIp),
+					rows:20,
+					rowList: [20,40,80],
+					colModel: [
+						{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+						{ title: 'IP', name: 'ip',index: true,sorttype: 'string' }, 
+						{ title: 'TTL', name: 'ttl',index: true,sorttype: 'number' }, 
+						{ title: '延时ms', name: 'time_consume',index: true,sorttype: 'number' }, 
+						{ title: 'MAC地址', name: 'arp_addr',index: true,sorttype: 'string' }, 
+						{ title: '探测设备', name: 'agent_ip',index: true,sorttype: 'string' },
+					],
+				});
+			}	
+		});
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+
+

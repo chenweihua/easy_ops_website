@@ -1,0 +1,251 @@
+{% extends "InteranetDetect/sw_common.html" %}
+
+{% block title %}
+	Main Page
+{% endblock %}
+
+{% block subcontent %}
+<div class="jumbotron">
+  <h3 id="id_h3_main_text"></h3>
+</div>
+
+<input class="form-control" style="width:110px" id="id_input_date" type="text" onchange = "GetData(this.value)"/>
+<div id="id_div_canvas" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
+
+<script type="text/javascript">
+	$(function (){
+		ProProcess();		
+	});
+
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		DatePreProc();
+		TextProc();
+		
+		
+		var today = new Date();
+		var DateNow = today.getFullYear() + '-' + _D(today.getMonth() + 1) + '-' + _D(today.getDate());
+		GetData(DateNow);
+		
+	}
+	
+	function TextProc(){
+		$.ajax({
+			type:"GET",
+			url:"/intnetdet/sw_get_cnt_data/",
+			dataType:"json",
+			async:false,
+			success:function(data){
+				console.log(data);
+				
+				var myDate = new Date()
+				var sDate = myDate.getFullYear()+ '年' + (myDate.getMonth() + 1) + '月' + myDate.getDate() + '日';
+				$("#id_h3_main_text").html("截止" + '<span style="color:red">' + sDate + '</span>' + "，系统共接入监控交换机 "  + '<span style="color:red">' + data['sw_cnt'] + '</span>' + " 台，监控MAC "  + '<span style="color:red">' + data['mac_cnt']  + '</span>' + " 个。");
+				
+			},		
+		});
+	
+	}
+	
+	function _D(Num){
+		console.log(Num);
+		if(Num < 10 && Num > 0){
+			return '0' + Num;
+		}
+		return Num;
+	}
+	
+	function DatePreProc(){
+		var today = new Date();
+		var DateNow = today.getFullYear() + '-' + _D(today.getMonth() + 1) + '-' + _D(today.getDate());
+		$("#id_input_date").attr('value',DateNow);
+		$("#id_input_date").datetimepicker({
+            language:  'zh-CN',
+            weekStart: 1,
+            todayBtn:  1,
+            autoclose: 1,
+            todayHighlight: 1,
+            startView: 2,
+            minView: 2,
+            forceParse: 0,
+            format:'yyyy-mm-dd',
+            todayBtn:  1,
+        });
+	}
+	
+	function GetData(sDate){
+		var aProcDoneData = [];
+		var aNoRetData = [];
+		var aProcDoneData_1 = [];
+		var aNoRetData_1 = [];
+		var aTime = [];
+		$.ajax({
+			type:"GET",
+			url:"/intnetdet/sw_get_access_log_data/proc_done/cnt_flag_" + sDate + "/",
+			dataType:"json",
+			async:false,
+			success:function(data){
+				aProcDoneData = data;
+			},		
+		});
+		
+		$.ajax({
+			type:"GET",
+			url:"/intnetdet/sw_get_access_log_data/no_ret/cnt_flag_" + sDate + "/",
+			dataType:"json",
+			async:false,
+			success:function(data){
+				aNoRetData = data;
+			},		
+		});
+		
+		console.log(aProcDoneData);
+		console.log(aNoRetData);
+		
+		//归并数组
+		var i = j = k = 0;
+		while(true){			
+			if (i < aProcDoneData.length && j < aNoRetData.length){
+				if(aProcDoneData[i].timestamp < aNoRetData[j].timestamp){
+					aTime[k] = aProcDoneData[i].update_time;					
+					aProcDoneData_1[k] = aProcDoneData[i].cnt;
+					k++;
+					i++;
+				}
+				else{
+					aTime[k] = aNoRetData[j].update_time;
+					aNoRetData_1[k] = aNoRetData[j].cnt;
+					k++;
+					j++;
+				}
+			}
+			else if(i < aProcDoneData.length){
+				//将剩余的数据填充在尾部
+				aTime[k] = aProcDoneData[i].update_time;
+				aProcDoneData_1[k] = aProcDoneData[i].cnt;
+				k++;
+				i++;
+			}
+			else if(j < aNoRetData.length){
+				//将剩余的数据填充在尾部
+				aTime[k] = aNoRetData[j].update_time;
+				aNoRetData_1[k] = aNoRetData[j].cnt;
+				k++;
+				j++;
+			}
+			else{
+				break;
+			}
+		}
+		
+		for (var i = 0 ; i < aTime.length; i++){
+			if(typeof(aNoRetData_1[i]) == 'undefined'){
+				aNoRetData_1[i] = 0;
+			}
+			
+			if(typeof(aProcDoneData_1[i]) == 'undefined'){
+				aProcDoneData_1[i] = 0;
+			}		
+		}
+		
+		CreatePic(sDate,aProcDoneData_1,aNoRetData_1,aTime);
+	}
+	
+	function CreatePic(sDate,aProcDoneData,aNoRetData,aTime){
+		var MyChart = echarts.init(document.getElementById("id_div_canvas"));
+		window.onresize=MyChart.resize;
+		MyChart.setOption({
+            title : {
+                text: '交换机MAC探测趋势分布',
+                subtext: sDate,
+                textStyle:{
+                fontFamily: '微软雅黑',
+                },
+                subtextStyle:{
+					fontFamily: '微软雅黑',
+                },
+            },
+            tooltip : {
+				trigger: 'axis'
+			},
+			
+			legend: {
+				data:['探测完成数','无返回数'],
+			},
+			
+			toolbox: {
+				show : true,
+				feature : {
+					mark : {show: true},
+					dataView : {show: true, readOnly: false},
+					magicType : {show: true, type: ['line', 'bar']},
+					restore : {show: true},
+					saveAsImage : {show: true}
+				}
+			},
+			calculable : true,
+			xAxis : [
+				{
+					type : 'category',
+					boundaryGap : false,
+					data : aTime,
+				}
+			],
+			yAxis : [
+				{
+					type : 'value',
+					axisLabel : {
+						formatter: '{value} ' + '台'
+					}
+				}
+			],
+			series : [
+				{
+					name:'探测完成数',
+					type:'line',
+					data:aProcDoneData,
+					markPoint : {
+						data : [
+							{type : 'max', name: '最大值',symbol: 'none'},
+							{type : 'min', name: '最小值',symbol: 'none'},
+						],
+					},					
+					itemStyle : {
+						normal : {
+							lineStyle : {
+								width : 1,
+							},
+						},
+					},
+					symbol: 'none',
+				},
+				{
+					name:'无返回数',
+					type:'line',
+					data:aNoRetData,
+					markPoint : {
+						data : [
+							{type : 'max', name: '最大值',symbol: 'none'},
+							{type : 'min', name: '最小值',symbol: 'none'},
+						],
+					},					
+					itemStyle : {
+						normal : {
+							lineStyle : {
+								width : 1,
+							},
+						},
+					},
+					symbol: 'none',
+				},
+			]
+        });
+		
+	}
+	
+
+</script>
+{% endblock %}
+

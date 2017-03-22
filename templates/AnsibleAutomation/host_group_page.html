@@ -1,0 +1,234 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Host group page
+{% endblock %}
+
+{% block subcontent %}
+<div class="main_cont">
+	<span class="title_level_1">设备分组管理</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_up" onclick="JumpUpper()">返回</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_del" onclick="DelHostGroup()">删除</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_edit" onclick="EditHostGroup()">编辑</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_create" onclick="CreateHostGroup()">新建</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_restore_del" onclick="RestoreDelDev()" style="display:none;">恢复</button>
+			</li>
+			
+		</ul>
+	</div>
+	</br>
+	
+	<div id="id_div_show_status" class="asb_show_status">
+		<a onclick="GetUsingData()" id="id_a_using" style="">使用中</a> |
+		<a onclick="GetDelData()" id="id_a_del" style="">已删除</a>
+	</div>
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title" class="modal-title"></h4>
+				</div>
+				<div id="id_modal_body" class="modal-body">
+				</div>
+				<div id="id_modal_footer" class="modal-footer">
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="id_div_host_group">
+		<ul id="id_ul_host_group" class="asb_ul">
+			<li class="asb_li">
+				<div class="asb_rectangle">
+					<a href={% url 'asb_atom_task_page_url' %}>
+						<div class="atom_icon"></div>
+						<span class="title_level_2">原子操作管理</span>
+						<span class="asb_cnt" id="id_atom_icon_cnt"></span>
+					</a>
+				</div>
+			</li>
+		</ul>
+	</div>
+	
+	
+</div>
+<script type="text/javascript">
+	var gHostGroupData = {};
+	var gViewFlag = "using"; //using | del
+	$(function (){
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();
+		
+		CreateHostGroupGraph();
+	});
+	
+	
+	//-------------------------------------
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});	
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+	}
+	
+	function JumpUpper(){
+		location.href = "{% url 'asb_main_page_url' %}";
+	}
+	
+	function CreateHostGroup(){
+		//绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+		
+		//填充
+		$("#id_modal_title").append($('<span>创建设备分组</span>'));
+		$("#id_modal_body").append($('\
+			<form action="" id="id_form_add_dev" class="form-horizontal" role="form" method="POST">'
+			+ "{% csrf_token %}"
+			+ '<div class="form-group">\
+					<label class="control-label col-md-2">分组描述</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_statement" name="statement" rows="10" style="width:350px;" placeholder="备注信息"></textarea>\
+					</div>\
+				</div>\
+			</form>\
+		'));
+		
+		$("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateCreateHostGroup()">提交</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+		
+	}
+	function EditHostGroup(){}
+	function DelHostGroup(){}
+	
+	function UpdateCreateHostGroup(){
+		if($("#id_statement").val() == ''){
+			alert("请输入分组描述信息！");
+			return;
+		}
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "add_host_group_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				statement: $("#id_statement").val(),
+			},
+			success:function(data){
+				console.log(data);
+				//刷新本页面
+				
+				$("#id_modal_common").modal('hide');
+			}
+		});
+		
+	}
+	function UpdateEditHostGroup(){}
+	function RestoreDelHostGroup(){}
+	function GetHostGroupData(){
+		//获取设备分组信息
+		$.ajax({
+			type: "GET",
+			url: "/ansible/get_host_group_data/using/empty_flag/",
+			async:false,
+			success: function(data){
+				console.log(data);
+				gHostGroupData = data;
+			}		
+		});
+	}
+	
+	function CreateHostGroupGraph(){
+		//创建展示图标
+		GetHostGroupData();
+		console.log(gHostGroupData);
+		
+		$("#id_ul_host_group").empty();
+		for(var i in gHostGroupData){
+			var oTmp = gHostGroupData[i];
+			console.log(oTmp);
+			/*
+			<li class="asb_li">
+				<div class="asb_rectangle">
+					<a href={% url 'asb_atom_task_page_url' %}>
+						<div class="atom_icon"></div>
+						<span class="title_level_2">原子操作管理</span>
+						<span class="asb_cnt" id="id_atom_icon_cnt"></span>
+					</a>
+				</div>
+			</li>
+			*/
+			$("#id_ul_host_group").append($('\
+				<li class="asb_li">\
+					<div class="asb_rectangle">\
+						<a href="">\
+							<div class="single_host_group_icon"></div>\
+							<span class="title_level_2">分组ID '+ oTmp['host_group_id'] +'</span>\
+							<span class="asb_cnt" id="id_atom_icon_cnt">' + oTmp['host_cnt'] + '</span>\
+						</a>\
+					</div>\
+				</li>\
+			'));
+			
+		}
+		
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+

@@ -1,0 +1,17 @@
+<table class="table table-hover table-striped  table-bordered table-condensed">
+	<tr>
+		<th>主机IP</th>
+		<th>登陆用户</th>
+		<th>su用户</th>
+	</tr>
+
+		{% for i in lPage1 %}
+			<tr style="font-size: 13px;">
+				<td>{{ i.host_ip }}</td>
+				<td>{{ i.host_user }}</td>
+				<td>{{ i.host_su_user }}</td>
+			</tr>
+		{% endfor %}
+
+</table>
+{% include "common/paginator.html" %}

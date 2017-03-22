@@ -1,0 +1,12 @@
+{% extends "common/base.side.html" %}
+
+{% block rcontent %}
+<div class="btn-toolbar">
+	<div class="btn-group">
+		{% url "framework_health_url" as the_framework_health_url %}
+		<a class="btn btn-default {%if request.path = the_framework_health_url %} active {%endif%}" href={{ the_framework_health_url }}><span class="glyphicon glyphicon-list"></span>健康度数据</a>
+	</div>
+</div>
+<hr/>
+{% block subcontent %}{% endblock %}
+{% endblock %}

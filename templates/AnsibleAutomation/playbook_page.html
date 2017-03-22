@@ -1,0 +1,853 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Playbook page
+{% endblock %}
+
+{% block subcontent %}
+<script src="/static/js/jquery-ui.min.js"></script>
+<div class="main_cont">
+	<span class="title_level_1">playbook管理</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" onclick="JumpUpper()">返回</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" onclick="DelPlaybook()">删除</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" onclick="EditPlaybook()">编辑</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" onclick="CreatePlaybook()">新建</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_run_pb" onclick="RunPlaybook('all')">执行</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_run_pb_by_step" onclick="RunPlaybook('step')">逐步执行</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_chk_rst" onclick="CheckResult()">查看结果</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" onclick="RestoreDelPlaybook()" style="display:none;">恢复</button>
+			</li>
+			
+		</ul>
+	</div>
+	</br>
+	
+	<div id="id_div_show_status" class="asb_show_status">
+		<a onclick="GetUsingData()" id="id_a_using" style="">使用中</a> |
+		<a onclick="GetDelData()" id="id_a_del" style="">已删除</a>
+	</div>
+    
+    <table data-toggle="table"
+			id="table"
+			data-url= '/ansible/get_playbook_table_data/using/empty_flag/'
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+            
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>
+			<th data-field="playbook_id" data-sortable="true">ID</th>
+			<th data-field="statement" data-sortable="true">名称</th>
+			<th data-field="username" data-sortable="true">创建人</th>
+			<th data-field="user_group_id" data-sortable="true">所属组</th>
+			<th data-field="proc_type" data-sortable="true">执行类型</th>
+			<th data-field="proc_flag" data-sortable="true">执行</th>
+		</tr>
+		</thead>
+	</table>
+    
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog" style="width:920px;">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title" class="modal-title">playbook编排</h4>
+				</div>
+				<div id="id_modal_body" class="modal-body">
+				<div class="asb_query_table_modal">
+					<ul class="" id="">
+                        <li class="" id="" style="float:left;">
+                            <div class="">
+                                <input style="width:275px" class="form-control" type="text" id="id_input_playbook_name" placeholder="请输入任务名称"/>
+                            </div>
+                        </li>
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_redo" onclick="SavePlaybook()" data-content="保存"><i class="fa fa-floppy-o" aria-hidden="true"></i></button>
+						</li>
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_redo" onclick="ReDoPlaybook()" data-content="重做"><i class="fa fa-repeat" aria-hidden="true"></i></button>
+						</li>
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_undo" onclick="UnDoPlaybook()" data-content="撤销"><i class="fa fa-undo" aria-hidden="true"></i></button>
+						</li>
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_plus" onclick="PlusPlaybook()" data-content="放大"><i class="fa fa-search-plus" aria-hidden="true"></i></button>
+						</li>	
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_minus" onclick="MinusPlaybook()" data-content="缩小"><i class="fa fa-search-minus" aria-hidden="true"></i></button>
+						</li>
+						<li class="" id="" style="float:right;">
+							<button type="button" class="btn btn-default btnExplain" id="id_button_playbook_minus" onclick="AddTaskNode()" data-content="新增任务节点"><i class="fa fa-plus" aria-hidden="true"></i></button>
+						</li>
+					</ul>
+				</div>
+				
+				<div id="id_playbook_holder" style="height:420px;width:890px;"></div>
+				</div>
+				<div id="id_modal_footer" class="modal-footer">
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="id_modal_atom_task" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title_atom_task" class="modal-title">添加原子任务</h4>
+				</div>
+				<div id="id_modal_body_atom_task" class="modal-body">
+					<table data-toggle="table"
+						   data-url="/ansible/get_atom_task_data/using/empty_flag/"						   
+						   id="id_table_atom_task"
+						   data-sort-name="insert_time"
+						   data-sort-order="desc"
+						   data-pagination="true"
+						   data-maintain-selected="true"
+                           data-single-select="true"
+						   data-click-to-select="true">
+						<thead>
+						<tr>
+							<th data-field="state" data-checkbox="true" data-formatter="SetAtomTaskSelected"></th>
+							<th data-field="insert_time" data-sortable="true">时间</th>
+							<th data-field="atom_task" data-sortable="true">任务</th>
+							<th data-field="statement" data-sortable="true">说明</th>
+							<th data-field="username" data-sortable="true">创建人</th>
+							<th data-field="user_group_id" data-sortable="true">所属组</th>
+						</tr>
+						</thead>
+					</table>
+				</div>
+				<div id="id_modal_footer_atom_task" class="modal-footer">
+					<button id="id_modal_submit_atom_task" class="btn btn-default" type="button" onclick="UpdateAtomTask()">提交</button>
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+    
+    
+    <div id="id_modal_file" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title_atom_task" class="modal-title">添加文件</h4>
+				</div>
+				<div id="id_modal_body_atom_task" class="modal-body">
+					<table data-toggle="table"
+						   data-url="/ansible/get_file_data/using/empty_flag/"						   
+						   id="id_table_file"
+						   data-sort-name="insert_time"
+						   data-sort-order="desc"
+						   data-pagination="true"
+						   data-maintain-selected="true"
+                           data-single-select="true"
+						   data-click-to-select="true">
+						<thead>
+						<tr>
+							<th data-field="state" data-checkbox="true" data-formatter="SetFileSelected"></th>
+							<th data-field="insert_time" data-sortable="true">时间</th>            
+                            <th data-field="file_name" data-sortable="true">文件名</th>
+                            <th data-field="file_flag" data-sortable="true">文件类型</th>
+                            <th data-field="statement" data-sortable="true">说明</th>
+                            <th data-field="username" data-sortable="true">创建人</th>
+                            <th data-field="user_group_id" data-sortable="true">所属组</th>
+						</tr>
+						</thead>
+					</table>
+				</div>
+				<div id="id_modal_footer_atom_task" class="modal-footer">
+					<button id="id_modal_submit_file" class="btn btn-default" type="button" onclick="UpdateFile()">提交</button>
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+    
+    
+    <div id="id_modal_atom_para" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title">添加参数</h4>
+				</div>
+				<div class="modal-body">
+					<form action="" id="id_form_add_task" class="form-horizontal" role="form" method="POST">
+                        <div class="form-group">
+                            <label class="control-label col-md-2">参数</label>
+                            <div class="col-md-4">
+                                <textarea class="form-control" cols="40" id="id_textarea_atom_para" name="atom_para" rows="10" style="width:400px;height:400px;" placeholder="请输入参数（json格式，后续可替换为表单）"></textarea>
+                            </div>
+                        </div>
+                    </form>
+				</div>
+				<div id="id_modal_footer_host" class="modal-footer">
+					<button id="id_modal_submit_host" class="btn btn-default" type="button" onclick="UpdateAtomPara()">提交</button>
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+    
+    <div id="id_modal_host" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title_host" class="modal-title">添加设备</h4>
+				</div>
+				<div id="id_modal_body_host" class="modal-body">
+					<table data-toggle="table"
+						   data-url="/ansible/get_host_data/using/empty_flag/"						   
+						   id="id_table_host"
+						   data-sort-name="insert_time"
+						   data-sort-order="desc"
+						   data-pagination="true"
+						   data-maintain-selected="true"
+						   data-click-to-select="true">
+						<thead>
+						<tr>
+							<th data-field="state" data-checkbox="true" data-formatter="SetHostSelected"></th>
+							<th data-field="insert_time" data-sortable="true">时间</th>
+							<th data-field="host" data-sortable="true">主机</th>
+							<th data-field="host_user" data-sortable="true">登陆用户</th>
+							<th data-field="host_su_user" data-sortable="true">su用户</th>
+							<th data-field="statement" data-sortable="true">说明</th>
+							<th data-field="username" data-sortable="true">创建人</th>
+							<th data-field="user_group_id" data-sortable="true">所属组</th>
+						</tr>
+						</thead>
+					</table>
+				</div>
+				<div id="id_modal_footer_host" class="modal-footer">
+					<button id="id_modal_submit_host" class="btn btn-default" type="button" onclick="UpdateHost()">提交</button>
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	
+	<div id="id_div_test" style="height:400px;width:700px;"></div>
+</div>
+
+
+
+<script src="/static/my_draw2d/CopyInterceptorPolicy.js"></script>
+<script src="/static/my_draw2d/basic_circle.js"></script>
+<script src="/static/my_draw2d/start.js"></script>
+<script src="/static/my_draw2d/end.js"></script>
+<script src="/static/my_draw2d/basic_rectangle.js"></script>
+
+<script type="text/javascript">
+    var canvas;		
+    var oTask = {};  //存放新增的task，用于分别存储表格中的数据
+    var $table = $('#table');
+    var gViewFlag = "using"; //using | del
+    
+    //编辑playbook时使用
+    var gPlaybookId = 'none';
+    var gUserGroupId = 'none';
+
+	$(function (){
+		ProProcess();		
+	});
+    
+    function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common,#id_modal_2").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+
+		//激活说明
+		$(".btnExplain").popover({trigger:"hover",placement:"bottom"});
+        
+        //高亮所选行
+        $table.on('click-row.bs.table', function (e, row, $element) {
+            $('.success').removeClass('success');
+            $($element).addClass('success');
+            
+            ChangeButtonBySelRows();
+            
+		});	
+        
+        
+        BindOnModalAtomPara();
+	}
+    
+    function ChangeButtonBySelRows(){
+        //根据所选行，展示不同的按钮信息
+        var sProcType = getSelectedRow().proc_type;
+        console.log(sProcType);
+        
+        if(sProcType === 'step'){
+            //显示按钮
+            //$("#id_button_run_pb_by_step").attr("style","display:block");
+            //隐藏按钮
+            //$("#id_button_run_pb").attr("style","display:none");
+            
+            $("#id_button_chk_rst").text("查看步骤");
+            
+        }
+        else if (sProcType === 'all'){
+            //显示按钮
+            //$("#id_button_run_pb").attr("style","display:block");
+            //隐藏按钮
+            //$("#id_button_run_pb_by_step").attr("style","display:none");
+            
+            $("#id_button_chk_rst").text("查看结果");
+        }
+        
+        
+    }
+	
+	function InitPolicy(){
+		//线条形状控制
+		canvas.installEditPolicy(new draw2d.policy.connection.DragConnectionCreatePolicy({
+			createConnection: function(){
+				return new draw2d.Connection({
+					router:new draw2d.layout.connection.ManhattanConnectionRouter(),
+					targetDecorator:new draw2d.decoration.connection.ArrowDecorator(),
+				});
+			}
+		}));
+		
+		canvas.installEditPolicy(new draw2d.policy.canvas.BoundingboxSelectionPolicy()); //选择框
+		//canvas.installEditPolicy(new CopyInterceptorPolicy()); //shift copy 都继承自select，和选择框有冲突
+	}
+
+	function CreatePlaybook(){
+		$("#id_playbook_holder").empty();
+	
+		canvas = new draw2d.Canvas("id_playbook_holder");		
+		InitPolicy();
+		
+		var start = new draw2d.shape.node.FlowStart();
+		var end = new draw2d.shape.node.FlowEnd();
+		var task = new draw2d.shape.node.FlowRectangle();
+		
+		/*
+		//label等信息添加在此
+		
+		$('#id_modal_common').on('shown.bs.modal', function() {		
+		})
+		*/
+        
+		canvas.add( start, 50,200);
+		canvas.add( end, 650,200);
+		canvas.add( task, 350,200);
+		
+		oTask = {};
+		
+		$("#id_modal_common").modal();
+
+	}
+	
+	function SavePlaybook(){
+        /*
+        两种场景：
+        1、新增保存；无playbook_id
+        2、编辑更新；有playbook_id
+        */
+		var writer = new draw2d.io.json.Writer();
+		writer.marshal(canvas, function(json){
+            console.log(JSON.stringify(json,null,2));
+            var sPlaybookName = $("#id_input_playbook_name").val();
+            if (sPlaybookName == ''){
+                sPlaybookName = 'none';
+            }
+            
+            $.ajax({
+                type:"POST",
+                url:'{% url "add_playbook_url" %}',
+                dataType:"json",
+                data:{
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    json_data: JSON.stringify(json,null,2),
+                    playbook_name: sPlaybookName,
+                    playbook_id: gPlaybookId,
+                    user_group_id: gUserGroupId,
+                },
+                success:function(data){
+                    console.log(gPlaybookId,gUserGroupId);
+                    if(gPlaybookId != 'none' && gUserGroupId != 'none'){
+                        //编辑的场景
+                        if(data['ret'] == 0){
+                            alert("非该playbook的创建者，无法编辑！");
+                        }
+                    }
+                
+                    $('#table').bootstrapTable('refresh','{silent:true}');
+                    $("#id_modal_common").modal('hide');
+                    
+                    //如果是编辑后保存，需要将其恢复成none，供后续使用
+                    if(gPlaybookId != 'none'){
+                        gPlaybookId = 'none';
+                    }
+                    if(gUserGroupId != 'none'){
+                        gUserGroupId = 'none';
+                    }
+                    
+                    //每次save完成后，将oTask清零，防止出现脏数据
+                    oTask = {};
+                }
+            });
+		});
+	}
+	
+	function DelPlaybook(){
+        if(true == confirm('确认删除吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "del_playbook_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					playbook_id: getSelectedRow().playbook_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该playbook的创建者，无法删除！");
+					}
+					else if (data['ret'] == 1){
+						$('#table').bootstrapTable('refresh',{
+							url: '',
+						});
+					}
+				}
+			});
+		}    
+    }
+    
+	function EditPlaybook(){
+        $.ajax({
+            type:"POST",
+            url:'{% url "get_playbook_edit_data_url" %}',
+            dataType:"json",
+            data:{
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                playbook_id:getSelectedRow().playbook_id,
+            },
+            success:function(data){
+                console.log(data);
+                gPlaybookId = getSelectedRow().playbook_id + ''; //转成string型
+                gUserGroupId = getSelectedRow().user_group_id + '';
+                var oPlaybook = JSON.parse(data['playbook']); 
+
+                //将UserData更新到oTask
+                CreateTaskData(oPlaybook);
+                
+                $("#id_playbook_holder").empty();
+                canvas = new draw2d.Canvas("id_playbook_holder");
+                InitPolicy();
+                
+                var reader = new draw2d.io.json.Reader();
+                reader.unmarshal(canvas, oPlaybook);
+                
+                $("#id_input_playbook_name").val(getSelectedRow().statement);
+                $("#id_modal_common").modal();
+            }
+        });
+    }
+    
+    
+	function RestoreDelPlaybook(){
+        //将删除的任务恢复
+		if(true == confirm('确认恢复吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "restore_del_playbook_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					playbook_id: getSelectedRow().playbook_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该命令的创建者，无法恢复！");
+					}
+					else if (data['ret'] == 1){
+						//成功恢复，refresh table
+						$("#table").bootstrapTable('refresh',{
+							url: '/ansible/get_playbook_table_data/del/empty_flag/',
+						});
+					}
+				}
+			});
+		}
+    
+    }
+	
+	function ReDoPlaybook(){
+		canvas.getCommandStack().redo();
+	}
+	function UnDoPlaybook(){
+		canvas.getCommandStack().undo();
+	}
+	function PlusPlaybook(){
+		canvas.setZoom(canvas.getZoom() * 0.5,true);
+	}
+	function MinusPlaybook(){
+		canvas.setZoom(canvas.getZoom() * 2,true);
+	}
+	function AddTaskNode(){
+		var task = new draw2d.shape.node.FlowRectangle();
+		canvas.add(task,200,200);
+	}
+
+    function GetUsingData(){
+		gViewFlag = "using";
+		$("#id_a_del").removeAttr("style");
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+		//显示按钮
+		$("#id_button_create").attr("style","display:block");
+		$("#id_button_edit").attr("style","display:block");
+		$("#id_button_del").attr("style","display:block");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:none");
+		
+		 style="display:none;"
+		
+		$('#table').bootstrapTable('refresh','{silent:true}');
+		
+	}
+	
+	function GetDelData(){
+		gViewFlag = "del";
+		$("#id_a_using").removeAttr("style");
+		$("#id_a_del").attr("style","color:rgb(250,101,1)");
+		//隐藏按钮
+		$("#id_button_create").attr("style","display:none");
+		$("#id_button_edit").attr("style","display:none");
+		$("#id_button_del").attr("style","display:none");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:block");
+		
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_playbook_table_data/del/empty_flag/',
+		});
+	}
+    
+	function JumpUpper(){		
+		location.href = "{% url 'asb_main_page_url' %}";
+	}
+	
+	//标识已经选择过的行
+	function SetAtomTaskSelected(value, row, index) {
+		if (! (typeof($("#id_modal_atom_task").data('current_task')) === 'undefined') ){
+		
+			//获取当前对象对应的已选择数据
+			var TaskId = $("#id_modal_atom_task").data('current_task').getId();
+            console.log('deb in set atom task:',TaskId);
+			
+			if(TaskId in oTask){
+				var aSelAtomTask = oTask[TaskId]['sel_atom_task'];
+				for (var i in aSelAtomTask){
+					if (row['atom_task_id'] === aSelAtomTask[i]['atom_task_id']){
+						return {
+							checked: true,
+						}
+					}
+				}
+			}
+		}
+		return value;
+	}
+    
+    
+    function SetFileSelected(value, row, index) {
+		if (! (typeof($("#id_modal_file").data('current_task')) === 'undefined') ){
+		
+			//获取当前对象对应的已选择数据
+			var TaskId = $("#id_modal_file").data('current_task').getId();
+            console.log('deb in set file:',TaskId);
+			
+			if(TaskId in oTask){
+				var aSelFile = oTask[TaskId]['sel_file'];
+				for (var i in aSelFile){
+					if (row['file_id'] === aSelFile[i]['file_id']){
+						return {
+							checked: true,
+						}
+					}
+				}
+			}
+		}
+		return value;
+	}
+    
+    
+    function SetHostSelected(value, row, index) {
+		if (! (typeof($("#id_modal_host").data('current_task')) === 'undefined') ){
+		
+			//获取当前对象对应的已选择数据
+			var TaskId = $("#id_modal_host").data('current_task').getId();
+			if(TaskId in oTask){                
+                var aSelHost = oTask[TaskId]['sel_host'];
+				for (var i in aSelHost){
+					if (row['host_id'] === aSelHost[i]['host_id']){
+						return {
+							checked: true,
+						}
+					}
+				}
+			}
+		}
+		return value;
+	}
+	
+	function UpdateAtomTask(){
+		//向playbook中添加选中的atom task的相关信息
+		
+		//获取当前操作的对象
+		var TaskId = $("#id_modal_atom_task").data('current_task').getId();
+		
+        if(TaskId in oTask){
+            oTask[TaskId]['sel_atom_task'] = $('#id_table_atom_task').bootstrapTable('getSelections');
+        }
+        else{
+           oTask[TaskId] = {
+                sel_atom_task:$('#id_table_atom_task').bootstrapTable('getSelections'),		
+            }; 
+        }		
+		
+		var obj = $("#id_modal_atom_task").data('current_task');
+		var sDataJson = $('#id_table_atom_task').bootstrapTable('getSelections');
+        
+        var oUserData = obj.getUserData();
+        if (oUserData === null){
+            oUserData = {
+                atom_task:sDataJson,
+            };
+        }
+        else{
+            oUserData['atom_task'] = sDataJson;
+        }
+		obj.setUserData(oUserData);
+        $("#id_modal_atom_task").modal('hide');		
+	}
+    
+    function UpdateFile(){
+		//向playbook中添加选中的file的相关信息
+		
+		//获取当前操作的对象
+		var TaskId = $("#id_modal_file").data('current_task').getId();
+		
+        if(TaskId in oTask){
+            oTask[TaskId]['sel_file'] = $('#id_table_file').bootstrapTable('getSelections');
+        }
+        else{
+           oTask[TaskId] = {
+                sel_file:$('#id_table_file').bootstrapTable('getSelections'),		
+            }; 
+        }		
+		
+		var obj = $("#id_modal_file").data('current_task');
+		var sDataJson = $('#id_table_file').bootstrapTable('getSelections');
+        
+        var oUserData = obj.getUserData();
+        if (oUserData === null){
+            oUserData = {
+                file:sDataJson,
+            };
+        }
+        else{
+            oUserData['file'] = sDataJson;
+        }
+		obj.setUserData(oUserData);
+        $("#id_modal_file").modal('hide');		
+	}
+    
+    
+    function UpdateHost(){
+		//向playbook中添加选中的host的相关信息
+		
+		//获取当前操作的对象
+		var TaskId = $("#id_modal_host").data('current_task').getId();
+        
+
+		if(TaskId in oTask){
+            oTask[TaskId]['sel_host'] = $('#id_table_host').bootstrapTable('getSelections');
+        }
+        else{
+           oTask[TaskId] = {
+                sel_host:$('#id_table_host').bootstrapTable('getSelections'),		
+            }; 
+        }
+        
+		var obj = $("#id_modal_host").data('current_task');
+		var sDataJson = $('#id_table_host').bootstrapTable('getSelections');
+        
+        var oUserData = obj.getUserData();
+        if (oUserData === null){
+            oUserData = {
+                host:sDataJson,
+            };
+        }
+        else{
+            oUserData['host'] = sDataJson;
+        }
+		obj.setUserData(oUserData);
+		$("#id_modal_host").modal('hide');
+	}
+    
+    
+    function BindOnModalAtomPara(){
+        $("#id_modal_atom_para").on('show.bs.modal',function(e){
+            console.log(e);
+            var TaskId = $("#id_modal_atom_para").data('current_task').getId(); 
+            console.log(TaskId);
+            if(TaskId in oTask){
+                var sAtomPara = oTask[TaskId]['atom_para'];
+                console.log('in ',TaskId, ',para:',sAtomPara);
+                $("#id_textarea_atom_para").val(sAtomPara);
+            }
+            else{
+                $("#id_textarea_atom_para").val('');
+            }
+        });    
+    }
+    
+    function UpdateAtomPara(){
+        //向playbook中添加参数信息
+        var TaskId = $("#id_modal_atom_para").data('current_task').getId(); 
+        if(TaskId in oTask){
+            oTask[TaskId]['atom_para'] = $('#id_textarea_atom_para').val();
+        }
+        else{
+            oTask[TaskId] = {
+                atom_para:$('#id_textarea_atom_para').val(),
+            };
+        }
+        
+        var obj = $("#id_modal_atom_para").data('current_task');
+		var sDataJson = $('#id_textarea_atom_para').val();
+        
+        var oUserData = obj.getUserData();
+        if (oUserData === null){
+            oUserData = {
+                atom_para:sDataJson,
+            };
+        }
+        else{
+            oUserData['atom_para'] = sDataJson;
+        }
+		obj.setUserData(oUserData);
+		$("#id_modal_atom_para").modal('hide');
+    }
+    
+    function CreateTaskData(aJson){
+        oTask = {};
+        for(var i = 0; i < aJson.length; i++){
+            oJson = aJson[i];
+            if(oJson['type'] == 'draw2d.shape.node.FlowRectangle'){                
+                oTask[oJson['id']] = {
+                    'sel_atom_task':oJson['userData']['atom_task'],
+                    'sel_file':oJson['userData']['file'],
+                    'atom_para':oJson['userData']['atom_para'],
+                    'sel_host':oJson['userData']['host'],
+                };
+            }
+        }        
+        console.log(oTask);
+    }
+    
+    function RunPlaybook(sType){
+        if(true == confirm('确认执行吗？')){
+            $.ajax({
+				type:"POST",
+				url:'{% url "run_playbook_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					map_id: getSelectedRow().map_id,
+                    proc_type: sType,
+				},
+				success:function(data){
+					console.log(data);
+					if (data['ret'] == 1){
+						$('#table').bootstrapTable('refresh',{
+							url: '',
+						});
+					}
+				}
+			});
+        }    
+    }
+	
+    function CheckResult(){
+        //查看当前任务的执行结果
+        if(getSelectedRow().proc_type == 'step'){
+            location.href = '/ansible/proc_playbook_by_step/' + getSelectedRow().map_id + '/';
+        }
+        else{
+            location.href = '/ansible/check_playbook_result/' + getSelectedRow().map_id + '/';
+        }
+        
+    
+    }
+    
+    
+</script>
+{% endblock %}

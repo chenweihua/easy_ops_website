@@ -1,0 +1,178 @@
+@charset "utf-8";
+/* css document */
+
+.main_cont {
+	margin-bottom:30px;
+}
+
+.title_level_1 {
+	display:block;
+	font-size:22px;
+	border-left:8px solid;
+	margin-bottom:22px;
+	padding-left:0.75%;
+}
+
+.title_level_2 {
+	display:block;
+	font-size:16px;
+	margin-bottom:8px;
+	padding-left:0.75%;
+}
+
+.title_level_3 {
+	display:block;
+	font-size:14px;
+	border-left:8px solid;
+	margin-bottom:22px;
+	padding-left:0.75%;
+}
+
+.title_level_4 {
+	display:block;
+	font-size:14px;
+	margin-bottom:2px;
+	padding-left:0.75%;
+}
+
+.asb_rectangle {
+	border: 2px solid;
+	/* color: #565656; */
+	width: 125px;
+	height: 160px;
+	text-align: center;
+	display: block;	
+	/* background: #669; */
+	margin-bottom:22px;
+	margin-right:22px;
+}
+
+
+.asb_rectangle .atom_icon {
+	background: url("/static/images/ansible_automation/atom_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .host_icon {
+	background: url("/static/images/ansible_automation/host_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .host_group_icon {
+	background: url("/static/images/ansible_automation/host_group_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .playbook_icon {
+	background: url("/static/images/ansible_automation/playbook_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .user_group_icon {
+	background: url("/static/images/ansible_automation/user_group_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .file_icon {
+	background: url("/static/images/ansible_automation/file_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .single_host_group_icon {
+	background: url("/static/images/ansible_automation/host_group_icon.png") no-repeat center;
+	background-size: 45px 45px;
+	height: 60px;
+	width: 100%;
+}
+
+.asb_rectangle .asb_cnt {
+	display: block;
+	font-size: 42px;
+	color:#333;
+}
+
+.asb_rectangle:hover {
+	cursor: pointer;
+	border: 5px solid;
+}
+
+.asb_rectangle a {
+	text-decoration: none;
+	color: black;
+}
+
+.asb_ul {
+	list-style-type:none;
+	margin:0px;
+	padding:0px;
+}
+
+.asb_ul li {
+	float:left;
+	list-style:none;
+}
+
+.asb_query_table{
+	background-color: rgb(16, 16, 16);
+	padding: 10px 5px 1px 5px;
+	min-width: 700px;
+}
+
+.asb_query_table ul{
+	list-style-type:none;
+	padding:0px;
+}
+
+.asb_query_table ul li{
+	display: inline-block;
+	padding-right: 6px;
+}
+
+.asb_show_status{
+	text-align: right;
+	/* width: 580px; */
+}
+
+.asb_show_status a {
+	cursor: pointer;
+	text-decoration: none;	
+}
+
+.asb_playbook {
+	height:500px;
+	width: 100%;
+	border:1px solid #ccc;
+	padding:10px;	
+}
+
+.asb_query_table_modal{
+	background-color: rgb(16, 16, 16);
+	padding: 6px 5px 29px 5px;
+	min-width: 700px;
+}
+
+.asb_query_table_modal ul{
+	list-style-type:none;
+	padding:0px;
+}
+
+.asb_query_table_modal ul li{
+	display: inline-block;
+	padding-right: 6px;
+}
+
+
+
+

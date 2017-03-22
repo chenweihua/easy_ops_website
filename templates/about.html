@@ -1,0 +1,103 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+    Home
+{% endblock %}
+
+{% block rcontent %}
+	
+<div class="container">
+   <div class="jumbotron">
+      <h2>欢迎使用自动化运维工具</h2>
+   </div>
+</div>
+
+<!--test-->
+{% if user.is_superuser %}
+<!--
+<div class="btn-group">
+	<a class="btn btn-primary dropdown-toggle btn-xs" type="button" onclick="CmdSend()">测试下发</a>
+	<a class="btn btn-success dropdown-toggle btn-xs" type="button" onclick="RstQuery()">测试查询</a>
+</div>
+-->
+{% endif %}
+
+
+<div style="margin:20px 0 10px 0;"></div>
+<div style="margin:20px 0;"></div>
+<div class="easyui-draggable" style="width:200px;height:150px;background:#fafafa;border:1px solid #ccc"></div>
+<div class="easyui-draggable" data-options="handle:'#title'" style="width:200px;height:150px;background:#fafafa;border:1px solid #ccc;margin-top:10px">
+	<div id="title" style="padding:5px;background:#ccc;color:#fff">Title</div>
+</div>
+
+
+<div class="easyui-accordion" style="width:500px;height:300px;">
+	<div title="About" data-options="iconCls:'icon-ok'" style="overflow:auto;padding:10px;">
+		<h3 style="color:#0099FF;">Accordion for jQuery</h3>
+		<p>Accordion is a part of easyui framework for jQuery. It lets you define your accordion component on web page more easily.</p>
+	</div>
+	<div title="Help" data-options="iconCls:'icon-help'" style="padding:10px;">
+		<p>The accordion allows you to provide multiple panels and display one or more at a time. Each panel has built-in support for expanding and collapsing. Clicking on a panel header to expand or collapse that panel body. The panel content can be loaded via ajax by specifying a 'href' property. Users can define a panel to be selected. If it is not specified, then the first panel is taken by default.</p> 		
+	</div>
+	<div title="Ajax" data-options="href:'_content.html'" style="padding:10px">
+	</div>
+</div>
+
+<div id="id_draw" style="width=100%;height:700px;"></div>
+<div onselectstart="javascript:/*IE8 hack*/return false" id="gfx_holder" style="width: 1500px; height: 1500px; cursor: default; -webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></div>
+
+<script>
+	$(function(){
+		var canvas = new draw2d.Canvas("gfx_holder");
+		console.log(canvas);
+		
+		var figure1 = new draw2d.shape.basic.Oval();
+		var figure2 = new draw2d.shape.basic.Rectangle();
+		canvas.add(figure1,100,100);
+		canvas.add(figure2,120,150);
+	})
+
+
+
+//测试下发
+function CmdSend(){
+	//console.log('test');
+	var oObj = {
+			task_id:'25-1-23',
+			host_ip:[1,2],
+			playbook:3,	
+		};
+	$.ajax({
+		method:"POST",
+		url:'{% url "test_ansible_cmd_sendurl" %}',
+		contentType: "application/json; charset=utf-8",
+		dataType:"json",
+		data:JSON.stringify(oObj),
+		success:function(data){
+			//console.log('deb1',data);
+		}
+	});
+}
+
+//测试查询
+function RstQuery(){
+	var oObj = {
+			task_id:'25-1-23',
+		};
+	$.ajax({
+		method:"POST",
+		url:'{% url "test_ansible_result_queryurl" %}',
+		contentType: "application/json; charset=utf-8",
+		dataType:"json",
+		data:JSON.stringify(oObj),
+		success:function(data){
+			//console.log('deb1',data);
+		}
+	});
+}
+</script>
+
+<!--end test-->
+
+
+{% endblock %}

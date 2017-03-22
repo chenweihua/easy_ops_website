@@ -1,0 +1,72 @@
+{% extends "InteranetDetect/intnetdet_common.html" %}
+
+{% block title %}
+	Dev Page
+{% endblock %}
+
+{% block subcontent %}
+
+<div id="id_div_query_table">
+
+</div>
+
+
+
+
+<script>
+	$(function(){
+		
+		ProProcess();
+		QueryFunction(); //默认获取全部信息
+	});
+	
+	//----------------------------------
+		
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+	}
+
+	function QueryFunction(){
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "query_dev_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+			},
+			//async:false,
+			success:function(data){
+				$("id_div_query_table").children().remove();
+				
+				//console.log(data);
+				var aDev = data['ldata'];
+				
+				$("#id_div_query_table").children().remove();
+				var MyTaskGrid = new bbGrid.View({        
+					container: $('#id_div_query_table'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aDev),
+					rows:20,
+					rowList: [20,40,80],
+					colModel: [
+						{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
+						{ title: '探测设备', name: 'dev_ip',index: true,sorttype: 'string' }, 
+						{ title: '设备类型', name: 'dev_type',index: true,sorttype: 'string' }, 
+						{ title: '网段类型', name: 'net_type',index: true,sorttype: 'string' },
+					],
+				});
+			}	
+		});
+	}
+	
+</script>
+{% endblock %}
+
+
+
+
+
+

@@ -1,0 +1,344 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	File page
+{% endblock %}
+
+{% block subcontent %}
+
+<!-- <html> -->
+    <!-- <head> -->
+        <!-- <meta charset="utf-8"> -->
+        <!-- <title>Minimal Django File Upload Example</title>    -->
+    <!-- </head> -->
+    <!-- <body> -->
+    
+    <!-- {% if documents %} -->
+        <!-- <ul> -->
+        <!-- {% for document in documents %} -->
+            <!-- <li><a href="{{ document.docfile.url }}">{{ document.docfile.name }}</a></li> -->
+        <!-- {% endfor %} -->
+        <!-- </ul> -->
+    <!-- {% else %} -->
+        <!-- <p>No documents.</p> -->
+    <!-- {% endif %} -->
+
+        
+        <!-- <form action="{% url 'file_page_url' %}" method="post" enctype="multipart/form-data"> -->
+            <!-- {% csrf_token %} -->
+            <!-- <p>{{ form.non_field_errors }}</p> -->
+            <!-- <p>{{ form.docfile.label_tag }} {{ form.docfile.help_text }}</p> -->
+            <!-- <p> -->
+                <!-- {{ form.docfile.errors }} -->
+                <!-- {{ form.docfile }} -->
+            <!-- </p> -->
+            <!-- <p><input type="submit" value="Upload" /></p> -->
+        <!-- </form> -->
+    <!-- </body> -->
+<!-- </html>  -->
+
+
+
+<!-- <html> -->
+    <!-- <head> -->
+        <!-- <meta charset="utf-8"> -->
+        <!-- <title>Minimal Django File Upload Example</title>    -->
+    <!-- </head> -->
+    <!-- <body> -->
+        <!-- <form action="/ansible/test_file_page/" method="post" enctype="multipart/form-data"> -->
+            <!-- <p></p> -->
+            <!-- <p><label for="id_docfile">Select a file:</label> max. 42 megabytes</p> -->
+            <!-- <p> -->
+                
+                <!-- <input id="id_docfile" name="docfile" type="file" /> -->
+            <!-- </p> -->
+            <!-- <p><input type="submit" value="Upload" /></p> -->
+        <!-- </form> -->
+    <!-- </body> -->
+<!-- </html>  -->
+
+
+<div class="main_cont">
+	<span class="title_level_1">上传文件管理</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_up" onclick="JumpUpper()">返回</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_del" onclick="DelLoadFile()">删除</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_download" onclick="GetLoadFile()">下载</button>
+			</li>
+			<!-- <li class="" id="" style="float:right;"> -->
+				<!-- <button type="button" class="btn btn-default" id="id_button_edit" onclick="EditDev()">编辑</button> -->
+			<!-- </li> -->
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_create" onclick="CreateLoadFile()">上传</button>
+			</li>
+			<!-- <li class="" id="" style="float:right;"> -->
+				<!-- <button type="button" class="btn btn-default" id="id_button_restore_del" onclick="RestoreDelDev()" style="display:none;">恢复</button> -->
+			<!-- </li> -->
+			
+		</ul>
+	</div>
+	</br>
+	
+	<div id="id_div_show_status" class="asb_show_status">
+		<a onclick="GetUsingData()" id="id_a_using" style="">使用中</a> |
+		<a onclick="GetDelData()" id="id_a_del" style="">已删除</a>
+	</div>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= "/ansible/get_file_data/using/empty_flag/"
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>            
+			<th data-field="file_name" data-sortable="true">文件名</th>
+			<th data-field="file_flag" data-sortable="true">文件类型</th>
+			<th data-field="statement" data-sortable="true">说明</th>
+			<th data-field="username" data-sortable="true">创建人</th>
+			<th data-field="user_group_id" data-sortable="true">所属组</th>
+		</tr>
+		</thead>
+	</table>
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title" class="modal-title"></h4>
+				</div>
+				<div id="id_modal_body" class="modal-body">
+				</div>
+				<div id="id_modal_footer" class="modal-footer">
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+</div>
+
+<script>
+    var $table = $('#table');
+	var gViewFlag = "using"; //using | del
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();	
+	});
+	//-------------------------------------
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});	
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_host_data/' + gViewFlag + '/' + sSearchVal + '/',
+		});
+	}
+	
+	function JumpUpper(){
+		location.href = "{% url 'asb_main_page_url' %}";
+	}
+    
+    function GetUsingData(){
+		gViewFlag = "using";
+		$("#id_a_del").removeAttr("style");
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+		//显示按钮
+		$("#id_button_create").attr("style","display:block");
+		$("#id_button_download").attr("style","display:block");
+		$("#id_button_del").attr("style","display:block");
+		
+		//隐藏按钮
+		//$("#id_button_restore_del").attr("style","display:none");
+		
+		$('#table').bootstrapTable('refresh','{silent:true}');
+	}
+	
+	function GetDelData(){
+		gViewFlag = "del";
+		$("#id_a_using").removeAttr("style");
+		$("#id_a_del").attr("style","color:rgb(250,101,1)");
+		//隐藏按钮
+		$("#id_button_create").attr("style","display:none");
+		$("#id_button_download").attr("style","display:none");
+		$("#id_button_del").attr("style","display:none");
+		
+		//隐藏按钮
+		//$("#id_button_restore_del").attr("style","display:block");
+		
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_file_data/del/empty_flag/',
+		});
+	}
+    
+    function CreateLoadFile(){
+        //绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+        
+        //填充
+        $("#id_modal_title").append($('<span>上传文件</span>'));
+        $("#id_modal_body").append($('\
+            <form action="/ansible/add_file/" id="id_form_load_file" class="form-horizontal" role="form" method="POST" enctype="multipart/form-data">'
+			    +	"{% csrf_token %}"
+				+ ' <div class="form-group">\
+                        <label class="control-label col-md-2">文件类型</label>\
+                        <div class="col-md-6">\
+                            <select class="form-control" name="file_flag">\
+                                <option value="script" selected>script</option>\
+                                <option value="role">role</option>\
+                            </select>\
+                        </div>\
+                    </div>\
+                    <div class="form-group">\
+                        <label class="control-label col-md-2">说明</label>\
+                        <div class="col-md-6">\
+                            <textarea class="form-control" cols="20" id="id_statement" name="statement" rows="5" placeholder="请输入备注信息"></textarea>\
+                        </div>\
+                    </div>\
+                    <div class="form-group">\
+                        <label class="control-label col-md-2">文件</label>\
+                        <div class="col-md-6">\
+                            <input class="form-control" name="load_file" type="file"\
+                        </div>\
+                    </div>\
+			</form>\
+		'));
+        
+        $("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateCreateLoadFile()">上传</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+    }
+    
+    function GetLoadFile(){
+        //下载选中的文件
+        //绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+        
+        $("#id_modal_title").append($('<span>下载文件</span>'));        
+        $("#id_modal_body").append($('\
+            <a href="/media/' + getSelectedRow().file_path + '">' + getSelectedRow().file_name + '</a>\
+        '));
+
+        $("#id_modal_common").modal();    
+    }
+    
+    
+    function UpdateCreateLoadFile(){
+        if($("#id_statement").val() == ''){
+            $("#id_statement").val('none');
+        }
+        $("#id_form_load_file").submit();
+    }
+    
+    function EditLoadFile(){
+        //绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+        $("#id_modal_title").append($('<span>编辑</span>'));
+        $("#id_modal_common").modal();
+    }
+    function DelLoadFile(){
+        if(true == confirm('确认删除吗？')){
+            $.ajax({
+                type:"POST",
+                url:'{% url "del_file_url" %}',
+                dataType:"json",
+                data:{
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    file_id: getSelectedRow().file_id,				
+                    user_group_id: getSelectedRow().user_group_id,				
+                },
+                success:function(data){
+                    $("#id_modal_common").modal('hide');
+                    
+                    if(data['ret'] == 0){
+                        alert("非该文件的创建者，无法删除！");
+                    }
+                    
+                    if(data['ret'] == 1){
+                        $("#table").bootstrapTable('refresh',{
+                            url: '',
+                        });
+                    }
+                }
+            });
+        }
+    }
+    function RestoreDelLoadFile(){}
+</script>
+
+
+
+{% endblock %}

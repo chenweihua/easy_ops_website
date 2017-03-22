@@ -1,0 +1,17 @@
+
+
+<form id="id_form_promission_edit" class="form-horizontal" role="form" action={% url "editpermissionurl" ID %} method="POST" >
+{% csrf_token %}
+
+	{% for item in form %}
+		<div class="form-group">
+			<label class="control-label col-md-2">{{item.label}}</label>
+			<div class="col-md-6">
+				{{item}}
+			</div>
+			<div class="col-md-offset-1 col-md-10">
+				{{item.errors}}
+			</div>
+		</div>
+	{% endfor %}
+</form>

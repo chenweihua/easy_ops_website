@@ -1,0 +1,493 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Host page
+{% endblock %}
+
+{% block subcontent %}
+<div class="main_cont">
+	<span class="title_level_1">设备管理</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_up" onclick="JumpUpper()">返回</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_del" onclick="DelDev()">删除</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_edit" onclick="EditDev()">编辑</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_create" onclick="CreateDev()">新建</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_restore_del" onclick="RestoreDelDev()" style="display:none;">恢复</button>
+			</li>
+			
+		</ul>
+	</div>
+	</br>
+	
+	<div id="id_div_show_status" class="asb_show_status">
+		<a onclick="GetUsingData()" id="id_a_using" style="">使用中</a> |
+		<a onclick="GetDelData()" id="id_a_del" style="">已删除</a>
+	</div>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= "/ansible/get_host_data/using/empty_flag/"
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>
+			<th data-field="host" data-sortable="true">主机</th>
+			<th data-field="host_user" data-sortable="true">登陆用户</th>
+			<th data-field="host_su_user" data-sortable="true">su用户</th>
+			<th data-field="statement" data-sortable="true">说明</th>
+			<th data-field="asb_agent" data-sortable="true">asb_agent</th>
+			<th data-field="connect_flag" data-sortable="true">状态</th>
+			<th data-field="username" data-sortable="true">创建人</th>
+			<th data-field="user_group_id" data-sortable="true">所属组</th>
+		</tr>
+		</thead>
+	</table>
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title" class="modal-title"></h4>
+				</div>
+				<div id="id_modal_body" class="modal-body">
+				</div>
+				<div id="id_modal_footer" class="modal-footer">
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+</div>
+
+<script type="text/javascript">
+	var $table = $('#table');
+	var gViewFlag = "using"; //using | del
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();	
+	});
+	//-------------------------------------
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});	
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_host_data/' + gViewFlag + '/' + sSearchVal + '/',
+		});
+	}
+	
+	function JumpUpper(){
+		location.href = "{% url 'asb_main_page_url' %}";
+	}
+	
+	function CreateDev(){
+		//绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+		
+		//填充
+		$("#id_modal_title").append($('<span>新增设备</span>'));
+		$("#id_modal_body").append($('\
+			<form action="" id="id_form_add_dev" class="form-horizontal" role="form" method="POST">'
+			    +	"{% csrf_token %}"
+				+ '<div class="form-group">\
+					<label class="control-label col-md-2">主机</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host" name="host" rows="10" style="width:350px;" placeholder="主机IP（如：1.1.1.1）">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">端口</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_port" name="host_port" rows="10" style="width:350px;" placeholder="ssh端口（默认TCP 22）" value="22">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">用户名</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_user" name="host_user" rows="10" style="width:350px;" placeholder="登陆用户名（如：wls81）">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">密码</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_passwd" name="host_passwd" rows="10" style="width:350px;" placeholder="登陆密码">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">su用户名</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_su_user" name="host_su_user" rows="10" style="width:350px;" placeholder="su登陆用户名（如root）">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">su密码</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_su_passwd" name="host_su_passwd" rows="10" style="width:350px;" placeholder="su登陆密码">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">备注</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_statement" name="statement" rows="10" style="width:350px;" placeholder="备注信息"></textarea>\
+					</div>\
+				</div>\
+			</form>\
+		'));
+		
+		$("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateCreateDev()">提交</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+	}
+	
+	function EditDev(){
+		//绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+		
+		//填充
+		$("#id_modal_title").append($('<span>编辑设备</span>'));
+		$("#id_modal_body").append($('\
+			<form action="" id="id_form_edit_dev" class="form-horizontal" role="form" method="POST">'
+			    +	"{% csrf_token %}"
+				+ '<div class="form-group">\
+					<label class="control-label col-md-2">主机</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host" name="host" rows="10" style="width:350px;" placeholder="主机IP（如：1.1.1.1）" value="'+ getSelectedRow().host +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">端口</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_port" name="host_port" rows="10" style="width:350px;" placeholder="ssh端口（默认TCP 22）" value="'+ getSelectedRow().host_port +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">用户名</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_user" name="host_user" rows="10" style="width:350px;" placeholder="登陆用户名（如：wls81）" value="'+ getSelectedRow().host_user +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">密码</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_passwd" name="host_passwd" rows="10" style="width:350px;" placeholder="登陆密码" value="'+ getSelectedRow().host_passwd +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">su用户名</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_su_user" name="host_su_user" rows="10" style="width:350px;" placeholder="su登陆用户名（如root）" value="'+ getSelectedRow().host_su_user +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">su密码</label>\
+					<div class="col-md-4">\
+						<input class="form-control" cols="40" id="id_host_su_passwd" name="host_su_passwd" rows="10" style="width:350px;" placeholder="su登陆密码" value="'+ getSelectedRow().host_su_passwd +'">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<label class="control-label col-md-2">备注</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_statement" name="statement" rows="10" style="width:350px;" placeholder="备注信息">'+ getSelectedRow().statement +'</textarea>\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<div class="col-md-4">\
+						<input type="hidden" id="id_host_id" name="atom_task_id" value="' + getSelectedRow().host_id + '">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<div class="col-md-4">\
+						<input type="hidden" id="id_user_group_id" name="user_group_id" value="' + getSelectedRow().user_group_id + '">\
+					</div>\
+				</div>\
+			</form>\
+		'));
+		
+		$("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateEditDev()">编辑</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+	
+	}	
+	
+	function DelDev(){
+		if(true == confirm('确认删除吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "del_host_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					host_id: getSelectedRow().host_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该设备的创建者，无法删除！");
+					}
+					else if (data['ret'] == 1){
+						$('#table').bootstrapTable('refresh',{
+							url: '',
+						});
+					}
+				}
+			});
+		}
+	}
+	
+	
+	function JudgeHostInfo(){
+		//判断host信息的合法性
+		var sHost = $("#id_host").val();
+		var sHostPort = $("#id_host_port").val();
+		var sHostUser = $("#id_host_user").val();
+		var sHostPasswd = $("#id_host_passwd").val();
+		var sHostSuUser = $("#id_host_su_user").val();
+		var sHostSuPasswd = $("#id_host_su_passwd").val();
+		var sStatement = $("#id_statement").val();
+		
+		if(!sHost || !sHostPort || !sHostUser || !sHostPasswd || !sHostSuUser || !sHostSuPasswd){
+			alert('主机、端口、用户名、密码、su用户名、su密码等输入项不能为空');
+			return false;
+		}
+		
+		var reD = /[^\x00-\xff]/g; //提出任意双字节符号，如中文等，防止后端处理异常
+		if(reD.exec(sHost) || reD.exec(sHostPort) || reD.exec(sHostUser) || reD.exec(sHostPasswd)
+			|| reD.exec(sHostSuUser) || reD.exec(sHostSuPasswd)){
+			alert('请输入合法字符');
+			return false;
+		}
+		
+		//host验证	
+		var re = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/g;
+		if(!re.exec(sHost)){
+			alert('请输入合法IP');
+			return false;
+		}
+		
+		return true;
+	}
+	
+	function UpdateCreateDev(){
+		if (JudgeHostInfo() == false){
+			return ;
+		}
+		
+		if($("#id_statement").val() == ''){
+			$("#id_statement").val('none');
+		}
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "add_host_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				host: $("#id_host").val(),
+				host_port: $("#id_host_port").val(),
+				host_user: $("#id_host_user").val(),
+				host_passwd: $("#id_host_passwd").val(),
+				host_su_user: $("#id_host_su_user").val(),
+				host_su_passwd: $("#id_host_su_passwd").val(),
+				statement: $("#id_statement").val(),
+			},
+			success:function(data){
+				console.log(data);
+				$("#id_modal_common").modal('hide');
+				$("#table").bootstrapTable('refresh',{
+					url: '',
+				});
+				
+			}
+		});
+	}
+	
+	function UpdateEditDev(){
+		if (JudgeHostInfo() == false){
+			return ;
+		}
+		
+		if($("#id_statement").val() == ''){
+			$("#id_statement").val('none');
+		}
+		
+		$.ajax({
+			type:"POST",
+			url:'{% url "edit_host_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				host_id: $("#id_host_id").val(),
+				host: $("#id_host").val(),
+				host_port: $("#id_host_port").val(),
+				host_user: $("#id_host_user").val(),
+				host_passwd: $("#id_host_passwd").val(),
+				host_su_user: $("#id_host_su_user").val(),
+				host_su_passwd: $("#id_host_su_passwd").val(),
+				statement: $("#id_statement").val(),
+				user_group_id: $("#id_user_group_id").val(),
+			},
+			success:function(data){
+				$("#id_modal_common").modal('hide');
+				
+				if(data['ret'] == 0){
+					alert("非该设备的创建者，无法编辑！");
+				}
+				
+				if(data['ret'] == 1){
+					$("#table").bootstrapTable('refresh',{
+						url: '',
+					});
+				}
+				
+				
+				
+			}
+		});
+	}
+	
+	function GetUsingData(){
+		gViewFlag = "using";
+		$("#id_a_del").removeAttr("style");
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+		//显示按钮
+		$("#id_button_create").attr("style","display:block");
+		$("#id_button_edit").attr("style","display:block");
+		$("#id_button_del").attr("style","display:block");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:none");
+		
+		 style="display:none;"
+		
+		$('#table').bootstrapTable('refresh','{silent:true}');
+	}
+	
+	function GetDelData(){
+		gViewFlag = "del";
+		$("#id_a_using").removeAttr("style");
+		$("#id_a_del").attr("style","color:rgb(250,101,1)");
+		//隐藏按钮
+		$("#id_button_create").attr("style","display:none");
+		$("#id_button_edit").attr("style","display:none");
+		$("#id_button_del").attr("style","display:none");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:block");
+		
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_host_data/del/empty_flag/',
+		});
+	}
+	
+	function RestoreDelDev(){
+		//将删除的任务恢复
+		if(true == confirm('确认恢复吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "restore_del_host_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					host_id: getSelectedRow().host_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该命令的创建者，无法恢复！");
+					}
+					else if (data['ret'] == 1){
+						//成功恢复，refresh table
+						$("#table").bootstrapTable('refresh',{
+							url: '/ansible/get_host_data/del/empty_flag/',
+						});
+					}
+				}
+			});
+		}
+	}
+	
+
+	
+</script>
+{% endblock %}

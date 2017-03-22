@@ -1,0 +1,188 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Playbook Result by Step Page
+{% endblock %}
+
+{% block subcontent %}
+<script src="/static/js/jquery-ui.min.js"></script>
+<div class="main_cont">
+	<span class="title_level_1">playbook执行步骤</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="JumpUpper()">返回</button>
+			</li>
+			
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="RunStep()">执行</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="ShowReturnInfo()">查看结果</button>
+			</li>
+            <li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="" onclick="ShowTaskInfo()">查看任务</button>
+			</li>
+            
+		</ul>
+	</div>
+	</br>
+    
+    <table data-toggle="table"
+			id="table"
+			data-url= '/ansible/get_pb_step_proc_info/{{ mapid }}/'
+			data-query-params="queryParams"
+			data-pagination="true"            
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>
+			<th data-field="step_id" data-sortable="true">步骤</th>
+			<th data-field="obj_id" data-sortable="true">任务</th>
+			<th data-field="proc_flag" data-sortable="true">状态</th>
+		</tr>
+		</thead>
+	</table>
+	<div id="id_div_test" style="height:400px;width:700px;"></div>
+</div>
+
+
+<div id="id_modal_common" class="modal fade" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 id="id_modal_title" class="modal-title"></h4>
+            </div>
+            <div id="id_modal_body" class="modal-body">
+            </div>
+            <div id="id_modal_footer" class="modal-footer">
+                <button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="/static/my_draw2d/CopyInterceptorPolicy.js"></script>
+<script src="/static/my_draw2d/basic_circle.js"></script>
+<script src="/static/my_draw2d/start.js"></script>
+<script src="/static/my_draw2d/end.js"></script>
+<script src="/static/my_draw2d/basic_rectangle.js"></script>
+
+<script type="text/javascript">
+    console.log('deb',{{mapid}});
+    var $table = $('#table');
+
+	$(function (){
+		ProProcess();		
+	});
+    
+    function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common,#id_modal_2").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+        
+        //高亮所选行
+        $table.on('click-row.bs.table', function (e, row, $element) {
+            $('.success').removeClass('success');
+            $($element).addClass('success');
+		});	
+	}
+ 
+	function JumpUpper(){		
+		location.href = "{% url 'asb_playbook_page_url' %}";
+	}
+    
+    function ShowTaskInfo(){
+        //查看任务信息
+        
+        $("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+        
+        $("#id_modal_title").append($('<span>查看任务信息</span>'));
+        
+        sJson = getSelectedRow().step_info_json;
+        oJson = JSON.parse(sJson);
+        console.log('bef',oJson);
+        
+        ProcTaskinfo(oJson);
+        
+        console.log('aft',oJson);
+
+        $("#id_modal_body").append('<pre style = "background-color: #000000;color:#00bb00;font-size:15px;white-space:pre-wrap;">' + formatJson(oJson) + '</pre>');
+        $("#id_modal_common").modal();
+    }
+    
+    function ProcTaskinfo(oJson){
+        //预处理下，剔除不允许展示的字段
+        if('host' in oJson){
+            console.log('deb',oJson['host']);
+            for (var i = 0; i < oJson['host'].length; i++){
+                delete oJson['host'][i]['host_passwd'];
+                delete oJson['host'][i]['host_su_passwd'];
+            }
+        }
+    }
+	
+    function RunStep(){
+        //执行步骤
+        if(true == confirm('确认执行吗？')){
+            $.ajax({
+				type:"POST",
+				url:'{% url "run_playbook_by_step_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					proc_id: getSelectedRow().proc_id,
+				},
+				success:function(data){
+					if (data['ret'] == 1){
+						$('#table').bootstrapTable('refresh',{
+							url: '',
+						});
+					}
+				}
+			});
+        
+        }
+    }
+    
+    function ShowReturnInfo(){
+        //
+        location.href = '/ansible/check_playbook_result_by_step/' + getSelectedRow().proc_id + '/' + '{{mapid}}/';
+    
+    }
+    
+    
+</script>
+{% endblock %}

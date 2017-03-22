@@ -1,0 +1,122 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+    List User
+{% endblock %}
+
+{% block rcontent %}
+    <div class="btn-toolbar">
+        <div class="btn-group">
+            {% url "adduserurl" as theadduserurl %}
+            <a class="btn btn-default {%if request.path = theadduserurl%} active {%endif%}" href={{ theadduserurl }}><span class="glyphicon glyphicon-edit"></span>新建用户</a>
+            {% url "listuserurl" as thelistuserurl %}
+            <a class="btn btn-default {%if request.path = thelistuserurl%} active {%endif%}" href={{ thelistuserurl }}><span class="glyphicon glyphicon-list"></span>用户列表</a>
+			{% url "acc_log_url" as the_acc_log_url %}
+			<a class="btn btn-default {%if request.path = the_acc_log_url%} active {%endif%}" href={{ the_acc_log_url }}><span class="glyphicon glyphicon-list"></span>访问日志</a>
+        </div>
+    </div>
+
+    <hr/>
+
+    <table class="table table-hover table-striped  table-bordered table-condensed">
+        <tr>
+            <th>账号</th>
+            <th>姓名</th>
+            <th>性别</th>
+            <th>Email</th>
+            <th>状态</th>
+            <th>角色</th>
+            <th>最后登录时间</th>
+            <th>操作</th>
+        </tr>
+
+		{% for i in lPage %}
+			<tr style="font-size: 13px;">
+				<td>{{ i.username }}</td>
+				<td>{{ i.nickname|default:"----" }}</td>
+				<td>{{ i.sex|default:"----" }}</td>
+				<td>{{ i.email }}</td>
+				<td>
+					{% if i.is_active %}
+						<span class="label label-success">启用</span>
+					{% else %}
+						<span class="label label-default">禁用</span>
+					{% endif %}
+				</td>
+				<td>{{ i.role|default:"----" }}</td>
+				<td>{{ i.last_login|date:"Y-m-d H:i:s" }}</td>
+				<td class="host_buttom">
+				
+					<a class="btn btn-warning btn-xs"  onclick="EditUser('{{i.id}}')">编辑</a>
+					<a class="btn btn-danger btn-xs" href={% url "deleteuserurl" i.id %} onclick="return confirm('是否确认删除？')">删除</a>
+				</td>
+			</tr>
+		{% endfor %}
+
+	</table>
+	
+	<!-- modal -->
+	<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 class="modal-title">编辑用户信息</h4>
+				</div>
+				<div class="modal-body" id="id_modal_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="EditUserSubmit()">编辑</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+		$(function(){
+			ProProcess();
+		});
+		
+		function ProProcess(){
+			/*
+			*预处理函数
+			*/
+			//说明表头字段
+			$('[data-toggle=tooltip]').tooltip();
+			
+			//modal拖动
+			$("#id_modal_edit").draggable({
+				handle:".modal-header",
+				cursor:"move",
+				refreshPositions:false,
+			});
+		}
+		
+		function EditUser(UserId){
+			if(! confirm('确认编辑吗？')){
+				return;
+			}
+			$("#id_modal_body").children().remove();
+			
+			var Url = "{% url 'edituserurl' 999%}";
+			Url = Url.replace('999',UserId);
+			$.ajax({
+				type:"GET",
+				url:Url,
+				success:function(data){
+					//console.log(data);
+					
+					$("#id_modal_body").append(data);
+					$("#id_modal_edit").modal();
+				},
+			});
+		}
+		
+		function EditUserSubmit(){
+			$("#id_form_user_edit").submit();
+		}
+	
+	</script>
+
+    {% include "common/paginator.html" %}
+{% endblock %}

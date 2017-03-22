@@ -1,0 +1,116 @@
+{% extends "InteranetDetect/sw_common.html" %}
+
+{% block title %}
+	Switch Page
+{% endblock %}
+
+{% block subcontent %}
+<div class="main_cont">
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>			
+		</ul>
+	</div>
+	</br>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= "/intnetdet/sw_get_mac_data/empty_flag/"
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-page-size="25"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">插入时间</th>			
+			<th data-field="logic_name" data-sortable="true">逻辑名</th>
+			<th data-field="switch_ip" data-sortable="true">交换机</th>
+			<th data-field="agent_ip" data-sortable="true">探测设备</th>
+			<th data-field="interface" data-sortable="true">接口</th>
+			<th data-field="mac_addr" data-sortable="true">MAC</th>
+		</tr>
+		</thead>
+	</table>
+</div>
+
+
+<script type="text/javascript">
+	var $table = $('#table');
+	var gViewFlag = 'using';
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		ProProcess();	
+	});
+	
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});	
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+	}
+	
+	function Search(){
+		console.log($("#id_input_search").val());
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/intnetdet/sw_get_mac_data/' + sSearchVal + '/',
+		});
+	}
+	
+	
+	
+</script>
+
+
+{% endblock %}
+

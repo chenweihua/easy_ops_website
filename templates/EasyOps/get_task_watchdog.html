@@ -1,0 +1,471 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+    Watchdog GetTaskRst
+{% endblock %}
+
+{% block rcontent %}
+	<div class="btn-toolbar">
+		<div class="btn-group">
+			{% url "task_watchdogurl" as thetask_watchdogurl %}
+			{% url "atom_task_watchdogurl" as the_atom_task_watchdogurl %}
+			{% url "realtime_task_watchdogurl" as the_realtime_task_watchdogurl %}
+			<a class="btn btn-default {%if request.path = thetask_watchdogurl or pro_flag = '0' %} active {%endif%}" href={{ thetask_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置定时备份工具</a>
+			<a class="btn btn-default {%if request.path = the_realtime_task_watchdogurl or pro_flag = '1' %} active {%endif%}" href={{ the_realtime_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置实时维护工具</a>
+			<a class="btn btn-default {% if request.path = the_atom_task_watchdogurl %} active {% endif %}" href={{ the_atom_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>原子任务管理</a>
+		</div>
+	</div>
+    <hr/>    
+    <div class="panel-group" id="accord">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <a data-toggle="collapse" data-parent="#accord" href="#CollOne">
+                    监控任务【{{task_id}}】查询条件（点击展开）
+                </a>
+            </div>
+            <div id="CollOne" class="panel-collapse collapse">
+                <div class="panel-body">
+                    <div >
+                        <dl class = "dl-horizontal text-overflow">                        
+                            <table class="table table-hover table-striped  table-bordered table-condensed">
+                                <tr>
+				                    <td class="host_buttom">
+				                        <a class="btn btn-primary btn-xs" onclick = "GetAllHostInfo()" >全部主机</a>
+				                    </td>
+				                    <td class="host_buttom">
+				                        <a class="btn btn-warning btn-xs" onclick = "GetErrHostInfo()" >异常主机</a>                        
+				                    </td>
+                                </tr>
+								<tr >
+									<td id="id_td_task_info" colspan="2"></td>
+								</tr>
+                            </table>                  
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>        
+    </div>    
+    <hr/>
+
+    <table class="table table-hover table-striped  table-bordered table-condensed">
+        <tr>
+            <th>插入时间</th>
+            <th>更新时间</th>
+            <th>主机IP</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+
+        {% for i in lPage %}
+            <tr style="font-size: 15px;" id = 'tr_{{i.host_id}}'>
+                <td>{{ i.insert_time|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ i.update_time|date:"Y-m-d H:i:s" }}</td>
+                <td>{{ i.host_ip }}</td>
+                <td>{% if i.md5_0 = i.md5_1 %} <span class="label label-success">无变动</span> {% else %} <span class="label label-danger">有变动</span> {% endif %}</td>
+                <td class="host_buttom">
+					<div class="btn-group">
+						<a class="btn btn-primary dropdown-toggle btn-xs" type="button" data-toggle="dropdown">
+							查看 <span class="caret"></span>
+						</a>
+						<ul class="dropdown-menu" role="menu">
+							<li><a style="cursor:pointer" onclick="CheckGetStandardMsg({{task_id}},'{{i.host_id}}','{{i.host_ip}}')">{% if pro_flag = '0' %}监控标准{% else %}变更前配置{% endif %}</a></li>
+							<li><a style="cursor:pointer" onclick="CheckGetRTMsg({{task_id}},'{{i.host_id}}','{{i.host_ip}}')">{% if pro_flag = '0' %}实时数据{% else %}变更后配置{% endif %}</a></li>
+							<li><a style="cursor:pointer" onclick="CheckGetDiffMsg({{task_id}},'{{i.host_id}}','{{i.host_ip}}')">diff数据</a></li>
+						</ul>
+					</div>
+					
+					{% if pro_flag = '0' %}
+                    <a class="btn btn-warning btn-xs"  onclick = "UpdateInfo({{task_id}},{{i.host_id}})" onclick="return confirm('确认更新吗？')">更新</a>                        
+					{% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </table>
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog modal-lg">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_h4_title" class="modal-title"></h4>
+				</div>
+				<div id="id_div_body" class="modal-body">
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+    <script>
+	//全局操作
+	var gTaskInfo = '';
+	
+	$(function(){
+		ProProcess();
+		GetTaskInfo();
+		
+	})
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		//说明表头字段
+		$('[data-toggle=tooltip]').tooltip();
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:true,
+		});
+	}
+	
+	//get task info
+	function GetTaskInfo(){
+		//ajax			
+		$.ajaxSetup({
+			data:{csrfmiddlewaretoken: '{{ csrf_token }}'},
+		});
+		$.ajax({
+			type:"POST",
+			url:'{% url "get_the_task_info_watchdogurl" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				task_id:'{{task_id}}',
+				pro_flag:'{{pro_flag}}', //用于区分是task_watchdog还是realtime_task_watchdog
+			},
+			success:function(data){
+				//console.log(data['task_info']);
+				gTaskInfo = data['task_info'];
+				var sTaskInfo = gTaskInfo.replace(/;/g,"\n");
+				$("#id_td_task_info pre").remove();
+				$("#id_td_task_info").append('<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sTaskInfo + '</pre>');
+				
+				//window.location.href = '{% url "task_watchdogurl" %}';
+			}
+		});	
+	}
+	
+    
+    //获取全部主机监控信息函数
+    function GetAllHostInfo(){
+    	var TaskId = {{task_id}};
+    	location.href = '/easyops/get_task_watchdog/' + TaskId + '/1/{{pro_flag}}/';
+    }
+    
+    //获取异常主机监控信息函数
+    function GetErrHostInfo(){
+    	var TaskId = {{task_id}};
+        location.href = '/easyops/get_task_watchdog/' + TaskId + '/0/{{pro_flag}}/';
+    }
+    
+    //更新监控参照，暂时不需要区分实时和常态探测
+    function UpdateInfo(iTaskId,iHostId){
+    	location.href = '/easyops/update_the_task_watchdog/' + iTaskId + '/' + iHostId + '/';
+    }
+    
+    
+    function CreateNewTr(oObj,iTaskId,iHostId,sTrRstId,sHostIp){
+    	//ajax获取数据
+        var xmlHttp = new XMLHttpRequest();
+        var sUrl = '/easyops/get_the_task_watchdog/' + iTaskId + '/' + iHostId + '/{{pro_flag}}/'; 
+        xmlHttp.open('GET',sUrl,true);
+        xmlHttp.send();
+        xmlHttp.onreadystatechange = function(){
+            if(xmlHttp.readyState === 4){
+                if(xmlHttp.status === 200){
+                    //收到了数据
+                    var oData = JSON.parse(xmlHttp.responseText);
+                    var lData = JSON.parse(oData.ldata);
+                    
+                    if (lData.length === 0){
+                        //没有数据，直接返回
+                        return;
+                    }
+                    
+                    var iTdNum = 5; //列数
+                    var oTr = document.createElement('tr');
+                    oTr.setAttribute('id',sTrRstId);
+                    
+                    
+                    //写入行
+                    var iWrtCnt = 3;
+                    
+                    var sSubMsg = '';
+					if('{{pro_flag}}' == 0){
+						sSubMsg = '内容说明：监控标准' + '\n' + '主机IP：' + sHostIp + '\n' + '探测内容：\n';
+					}
+					else{
+						sSubMsg = '内容说明：变更前配置' + '\n' + '主机IP：' + sHostIp + '\n' + '探测内容：\n';
+					}
+					
+                    var sMsgA = TranStr(lData[0].ret_0);
+                    var oTd = document.createElement('td');
+                    oTd.innerHTML = '<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sSubMsg + sMsgA + '</pre>';
+                    oTr.appendChild(oTd);
+                    
+					if('{{pro_flag}}' == 0){
+						sSubMsg = '内容说明：实时数据' + '\n' + '主机IP：' + sHostIp + '\n' + '探测内容：\n';
+					}
+					else{
+						sSubMsg = '内容说明：变更后配置' + '\n' + '主机IP：' + sHostIp + '\n' + '探测内容：\n';
+					}
+					
+                    
+                    sMsgB = TranStr(lData[0].ret_1);
+                    var oTd = document.createElement('td');
+                    oTd.innerHTML = '<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sSubMsg + sMsgB + '</pre>';
+                    oTr.appendChild(oTd);
+                    
+                    //生成diff数据                    
+                    sSubMsg = '内容说明：diff数据' + '\n' + '主机IP：' + sHostIp + '\n' + 'diff内容：\n';
+                    sMsgC = GetDiffInfo(sMsgA,sMsgB);
+                    var oTd = document.createElement('td');
+                    oTd.innerHTML = '<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sSubMsg + sMsgC + '</pre>';
+                    oTr.appendChild(oTd);
+                    
+                    //剩下的补齐
+                    for(var i = 0; i < iTdNum - iWrtCnt; i++){
+                        var oTd = document.createElement('td');
+                        oTd.innerHTML = '';
+                        oTr.appendChild(oTd);
+                    }
+                    
+                    //return oTr;
+                    //异步，必须加在这里。。
+                    oObj.after(oTr);
+                }
+                else{
+                    //alert(xmlHttp.status);
+                }
+            }
+            else{
+                //alert(xmlHttp.readyState);
+            }
+        }
+    }
+    function CheckGetAllMsg(iTaskId,iHostId){
+		var sUrl = '/easyops/get_the_task_watchdog/' + iTaskId + '/' + iHostId + '/{{pro_flag}}/';
+		var oRetMsg = {};
+		$.ajax({
+			type: "GET",
+			url: sUrl,
+			async:false,
+			dataType:"json",
+			success: function(data){
+				oRetMsg = JSON.parse(data['ldata']);
+			},		
+		});	
+		return oRetMsg;
+	}
+	
+	
+	//获取异常信息
+	function CheckGetDiffMsg(iTaskId,iHostId,sHostIp){
+		var oRetMsg = CheckGetAllMsg(iTaskId,iHostId);
+		var sMsgA = TranStr(oRetMsg[0].ret_0);
+		var sMsgB = TranStr(oRetMsg[0].ret_1);
+		var sMsgC = GetDiffInfo(sMsgA,sMsgB);
+		var sSubMsg = '内容说明：diff数据' + '\n' + '主机IP：' + sHostIp + '\n' + 'diff内容：\n';
+
+		$("#id_div_body").children().remove();
+		$("#id_h4_title").text('diff数据');
+		$("#id_div_body").append('<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sSubMsg + sMsgC + '</pre>');
+		$("#id_modal_common").modal();
+		
+	}
+	
+	//获取监控标准
+	function CheckGetStandardMsg(iTaskId,iHostId,sHostIp){
+		var oRetMsg = CheckGetAllMsg(iTaskId,iHostId);
+		var sMsgA = TranStr(oRetMsg[0].ret_0);
+		//console.log(sMsgA);
+		//console.log(gTaskInfo);
+		
+		$("#id_div_body").children().remove();
+		if('{{pro_flag}}' == 0){
+			$("#id_h4_title").text('监控标准');
+		}
+		else{
+			$("#id_h4_title").text('变更前配置');
+		}
+		
+		//生成appendinfo		
+		$("#id_div_body").append(CreateAppendInfo(gTaskInfo,sMsgA));
+		$("#id_modal_common").modal();
+	}
+
+	//获取实时数据
+	function CheckGetRTMsg(iTaskId,iHostId,sHostIp){	
+		var oRetMsg = CheckGetAllMsg(iTaskId,iHostId);
+		var sMsgA = TranStr(oRetMsg[0].ret_1);
+		//console.log(sMsgA);
+		//console.log(gTaskInfo);
+		
+		$("#id_div_body").children().remove();
+		if('{{pro_flag}}' == 0){
+			$("#id_h4_title").text('实时数据');
+		}
+		else{
+			$("#id_h4_title").text('变更后配置');
+		}
+		
+		//生成appendinfo		
+		$("#id_div_body").append(CreateAppendInfo(gTaskInfo,sMsgA));
+		$("#id_modal_common").modal();
+	
+	}
+	
+	//根据split生成append信息，挂在modal div中
+	function CreateAppendInfo(sTaskInfo,sTaskMsg){
+		var sAppendInfo = '';
+		var aTaskInfo = sTaskInfo.split(';');
+		aTaskInfo.pop();
+		var aTaskMsg = sTaskMsg.split('---split---');
+		aTaskMsg.pop();
+		
+		sAppendInfo = 
+			'<ul id="id_ul_tab" class="nav nav-tabs"> \
+				<li class="dropdown">\
+					<a style="cursor:pointer" id="id_a_tab" class="dropdown-toggle" data-toggle="dropdown">监控命令 <b class="caret"></b></a>\
+					<ul class="dropdown-menu" role="menu" aria-labelledby="id_a_tab">LI_DATA</ul>\
+				</li>\
+			</ul>\
+			<div id="id_div_tab_content" class="tab-content">DIV_DATA</div>';
+		
+		var sLiDataInfo = '';
+		var sDivDataInfo = '';
+		for(var i in aTaskInfo){
+			sLiDataInfo += '<li><a href="#id_div_menu_' + i.toString() + '" tabindex="-1" data-toggle="tab">' + aTaskInfo[i] + '</a></li>';
+			sDivDataInfo += '<div class="tab-pane fade" id="id_div_menu_' + i.toString() + '">' 
+			+ '<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + UnUnicode(aTaskMsg[i]) + '</pre>' 
+			+ '</div>';
+			
+			//console.log(aTaskMsg[i]);
+			//console.log(UnUnicode(aTaskMsg[i]));
+		} 
+		
+		sAppendInfo = sAppendInfo.replace('LI_DATA',sLiDataInfo);
+		sAppendInfo = sAppendInfo.replace('DIV_DATA',sDivDataInfo);
+		//console.log(sAppendInfo);
+		return sAppendInfo;
+	}
+	
+	
+    function TranStr(sStr){
+    	var sRetMsg = sStr.replace(/@_@/g,'');
+    	
+    	//去[]
+    	sRetMsg = sRetMsg.replace(/^\[(.*)\]$/g,"$1");
+    	
+    	//去除前后的引号
+    	sRetMsg = sRetMsg.replace(/^"(.*)"$/g,"$1");
+    	
+    	//去除","
+    	sRetMsg = sRetMsg.replace(/", "/g,'\n');
+    	
+    	return sRetMsg;
+    }
+    
+    function GetDiffInfo(sStrA,sStrB){
+    	var aTmpA = sStrA.split("\n");
+    	var aTmpB = sStrB.split("\n");
+		var aTask = gTaskInfo.split(";");
+    	
+        var oTmpA = new Object();
+        var oTmpB = new Object();
+        
+        //转为对象存储
+        for (var i in aTmpA){
+        	oTmpA[i] = aTmpA[i];
+        }
+        for (var i in aTmpB){
+            oTmpB[i] = aTmpB[i];
+        }
+        
+        var aDelA = new Array();
+        var aDelB = new Array();
+        //比较(sort && distinct)
+        for(var KA in oTmpA){
+        	for(var KB in oTmpB){
+        		if (aTmpA[KA] == oTmpB[KB]){
+					if(aTmpA[KA] != '---split---'){
+						aDelA.push(KA);
+						aDelB.push(KB);
+					}
+        			
+        		} 
+        	}
+        }
+		
+		//将split替换掉
+		var iIndex = 1;
+		for(var KA in oTmpA){
+			if(oTmpA[KA] == '---split---'){
+				oTmpA[KA] = '===[' + aTask[iIndex] + ']===';
+				iIndex++;
+			}
+		}
+		iIndex = 1;
+		for(var KB in oTmpB){
+			if(oTmpB[KB] == '---split---'){
+				oTmpB[KB] = '===[' + aTask[iIndex] + ']===';
+				iIndex++;
+			}
+		}
+        
+        //删除
+        for(var i in aDelA){
+        	delete oTmpA[aDelA[i]];
+        }
+        for(var i in aDelB){
+        	delete oTmpB[aDelB[i]];
+        }
+    	
+        //输出
+        var RetMsg = '';
+		if('{{pro_flag}}' == 0){
+			RetMsg = '\n-------------监控标准-------------\n';
+		}
+		else{
+			RetMsg = '\n-------------变更前配置-------------\n';
+		}
+		RetMsg += '0\t===[' + aTask[0] + ']===\n';
+		
+        for(var KA in oTmpA){
+        	var iLineNum = +KA + 1; //字符串转数字
+        	RetMsg += iLineNum + '\t' + oTmpA[KA] + '\n';        	
+        }
+		
+		if('{{pro_flag}}' == 0){
+			RetMsg += '\n\n-------------实时数据-------------\n';
+		}
+		else{
+			RetMsg += '\n\n-------------变更后配置-------------\n';
+		}
+		RetMsg += '0\t===[' + aTask[0] + ']===\n';
+        
+       	for(var KB in oTmpB){
+       		var iLineNum = +KB + 1; //字符串转数字
+            RetMsg += iLineNum + '\t' + oTmpB[KB] + '\n';            
+        }
+        
+        return RetMsg;    	
+    }
+	
+	//用于将unicode编码解码成汉字
+	function UnUnicode(str) 
+	{ 
+		return unescape(str.replace(/\\/g, "%")); 
+	}
+	
+    </script>
+    {% include "common/paginator.html" %}
+
+
+{% endblock %}

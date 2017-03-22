@@ -1,0 +1,411 @@
+{% extends "AnsibleAutomation/common.html" %}
+
+{% block title %}
+	Atom Task page
+{% endblock %}
+
+{% block subcontent %}
+
+<div class="main_cont">
+	<span class="title_level_1">原子任务管理</span>
+	<div class="asb_query_table">
+		<ul class="" id="">
+			<li class="" id="">
+				<div class="input-group">
+					<input style="width:275px" class="form-control" type="text" id="id_input_search" placeholder="请输入搜索内容（支持模糊搜索）"/>
+					<span style="width:275px" class="input-group-btn">
+						<button class="btn btn-default" type="button" id="id_button_search" onclick="Search()"><i class="fa fa-search" aria-hidden="true"></i></button>
+					</span>
+				</div>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_up" onclick="JumpUpper()">返回</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_del" onclick="DelAtomTask()">删除</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_edit" onclick="EditAtomTask()">编辑</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_create" onclick="CreateAtomTask()">新建</button>
+			</li>
+			<li class="" id="" style="float:right;">
+				<button type="button" class="btn btn-default" id="id_button_restore_del" onclick="RestoreDelAtomTask()" style="display:none;">恢复</button>
+			</li>
+			
+		</ul>
+	</div>
+	</br>
+	<!--
+	table
+	data-show-columns="true"
+	
+	-->
+	<div id="id_div_show_status" class="asb_show_status">
+		<a onclick="GetUsingData()" id="id_a_using" style="">使用中</a> |
+		<a onclick="GetDelData()" id="id_a_del" style="">已删除</a>
+	</div>
+	
+	<table data-toggle="table"
+			id="table"
+			data-url= '/ansible/get_atom_task_data/using/empty_flag/'
+			data-query-params="queryParams"
+			data-pagination="true"
+			data-sort-name="insert_time"
+			data-sort-order="desc"
+		   >
+		<thead>
+		<tr>
+			<th data-field="insert_time" data-sortable="true">时间</th>
+			<th data-field="atom_task" data-sortable="true">任务</th>
+			<th data-field="statement" data-sortable="true">说明</th>
+			<th data-field="username" data-sortable="true">创建人</th>
+			<th data-field="user_group_id" data-sortable="true">所属组</th>
+		</tr>
+		</thead>
+	</table>
+
+	
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 id="id_modal_title" class="modal-title"></h4>
+				</div>
+				<div id="id_modal_body" class="modal-body">
+				</div>
+				<div id="id_modal_footer" class="modal-footer">
+					<button id="id_modal_close" class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+</div>
+
+<script type="text/javascript">
+	var $table = $('#table');
+	var gViewFlag = "using"; //using | del
+
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});		
+		
+		ProProcess();
+	});
+	
+	//-------------------------------------
+	function queryParams() {
+		//bootstrap-table分页
+		return {
+			type: 'owner',
+			sort: 'updated',
+			direction: 'desc',
+			per_page: 100,
+			page: 1
+		};
+	}
+	
+	function getSelectedRow() {
+		//bootstrap-table行选择
+		var index = $table.find('tr.success').data('index');
+		return $table.bootstrapTable('getData')[index];
+	}
+	
+	function ProProcess(){
+		/*
+		*预处理函数
+		*/
+		
+		//modal拖动
+		$("#id_modal_common").draggable({
+			handle:".modal-header",
+			cursor:"move",
+			refreshPositions:false,
+		});
+		
+		//search bar bind enter event
+		$("#id_input_search").bind('keypress',function(event){
+			if(event.keyCode == '13'){
+				Search();
+			}
+		});
+		
+		//页面初始时，将使用中标红
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");	
+	}
+	
+	function CreateAtomTask(){
+		//绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+		
+		//填充
+		$("#id_modal_title").append($('<span>新增原子任务</span>'));
+		$("#id_modal_body").append($('\
+			<form action="" id="id_form_add_task" class="form-horizontal" role="form" method="POST">'
+			    +	"{% csrf_token %}"
+				+ '<div class="form-group">\
+					<label class="control-label col-md-2">任务</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_task" name="atom_task" rows="10" style="width:400px;height:100px;" placeholder="请输入原子任务（为工作中用到的命令行，不支持换行）"></textarea>\
+					</div>\
+				</div>\
+				\
+				<div class="form-group">\
+					<label class="control-label col-md-2">说明</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_statement" name="statement" rows="10" style="width:400px;height:100px;" placeholder="请输入备注信息（说明该原子任务的作用）"></textarea>\
+					</div>\
+				</div>\
+			</form>\
+		'));
+		
+		$("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateAddAtomTask()">提交</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+	}
+	
+	function UpdateAddAtomTask(){
+		if ($("#id_task").val() == ''){
+			alert("原子任务内容不能为空！");
+		}
+		else{
+			if($("#id_statement").val() == ''){
+				$("#id_statement").val('none');
+			}
+			
+			$.ajax({
+				type:"POST",
+				url:'{% url "add_atom_task_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					atom_task: $("#id_task").val(),
+					statement: $("#id_statement").val(),					
+				},
+				success:function(data){
+					$('#table').bootstrapTable('refresh','{silent:true}');
+					$("#id_modal_common").modal('hide');
+				}
+			});
+			
+			/*
+			$("#id_form_add_task").submit();
+			$("#id_modal_common").modal('hide');
+			$('#table').bootstrapTable('refresh','{silent:true}');
+			*/
+		}
+		//$("#id_modal_common").modal('hide');
+	}
+	
+	function EditAtomTask(){
+		//alert('Selected insert_time: ' + getSelectedRow().del_flag;
+		//修改任务，说明信息
+		
+		//绘制modal
+		$("#id_modal_title").empty();
+		$("#id_modal_body").empty();
+		$("#id_modal_footer #id_button_submit").remove();
+		
+		//填充
+		$("#id_modal_title").append($('<span>编辑原子任务</span>'));
+		$("#id_modal_body").append($('\
+			<form action="" id="id_form_edit_task" class="form-horizontal" role="form" method="POST">'
+			    +	"{% csrf_token %}"
+				+ '<div class="form-group">\
+					<label class="control-label col-md-2">任务</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_task" name="atom_task" rows="10" style="width:400px;height:100px;" placeholder="请输入原子任务（为工作中用到的命令行，不支持换行）">'
+						+ getSelectedRow().atom_task
+						+ '</textarea>\
+					</div>\
+				</div>\
+				\
+				<div class="form-group">\
+					<label class="control-label col-md-2">说明</label>\
+					<div class="col-md-4">\
+						<textarea class="form-control" cols="40" id="id_statement" name="statement" rows="10" style="width:400px;height:100px;" placeholder="请输入备注信息（说明该原子任务的作用）">'
+						+ getSelectedRow().statement
+						+'</textarea>\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<div class="col-md-4">\
+						<input type="hidden" id="id_atom_task_id" name="atom_task_id" value="' 
+						+ getSelectedRow().atom_task_id 
+						+ '">\
+					</div>\
+				</div>\
+				<div class="form-group">\
+					<div class="col-md-4">\
+						<input type="hidden" id="id_user_group_id" name="user_group_id" value="' 
+						+ getSelectedRow().user_group_id 
+						+ '">\
+					</div>\
+				</div>\
+			</form>\
+		'));
+		
+		$("#id_modal_close").before($('\
+			<button id="id_button_submit" class="btn btn-primary" type="button" onclick="UpdateEditAtomTask()">编辑</button>\
+		'));
+		
+		$("#id_modal_common").modal();
+		
+	}
+	
+	function UpdateEditAtomTask(){
+		if ($("#id_task").val() == ''){
+			alert("原子任务内容不能为空！");
+		}
+		else{
+			if($("#id_statement").val() == ''){
+				$("#id_statement").val('none');
+			}
+			
+			$.ajax({
+				type:"POST",
+				url:'{% url "edit_atom_task_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					atom_task: $("#id_task").val(),
+					statement: $("#id_statement").val(),
+					atom_task_id: $("#id_atom_task_id").val(),
+					user_group_id: $("#id_user_group_id").val(),
+				},
+				success:function(data){
+					$("#id_modal_common").modal('hide');
+					
+					if(data['ret'] == 0){
+						alert("非该命令的创建者，无法编辑！");
+					}
+					
+					if(data['ret'] == 1){
+						$('#table').bootstrapTable('refresh','{silent:true}');
+					}
+					
+					
+					
+				}
+			});
+		}
+	}
+	
+	function DelAtomTask(){
+		if(true == confirm('确认删除吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "del_atom_task_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					atom_task_id: getSelectedRow().atom_task_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该命令的创建者，无法删除！");
+					}
+					else if (data['ret'] == 1){
+						//成功删除，refresh table
+						$('#table').bootstrapTable('refresh','{silent:true}');
+					}
+				}
+			});
+		}
+	}
+	
+	function RestoreDelAtomTask(){
+		//将删除的任务恢复
+		if(true == confirm('确认恢复吗？')){
+			$.ajax({
+				type:"POST",
+				url:'{% url "restore_del_atom_task_url" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					user_group_id: getSelectedRow().user_group_id,
+					atom_task_id: getSelectedRow().atom_task_id,
+				},
+				success:function(data){
+					console.log(data);
+					if(data['ret'] == 0){
+						alert("非该命令的创建者，无法恢复！");
+					}
+					else if (data['ret'] == 1){
+						//成功恢复，refresh table
+						//$('#table').bootstrapTable('refresh','{silent:true}');
+						$("#table").bootstrapTable('refresh',{
+							url: '/ansible/get_atom_task_data/del/empty_flag/',
+						});
+					}
+				}
+			});
+		}
+	}
+	
+	function Search(){
+		//修改table的url、method
+		var sSearchVal = $("#id_input_search").val();
+		if(sSearchVal == ''){
+			sSearchVal = 'empty_flag';
+		}
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_atom_task_data/' + gViewFlag + '/' + sSearchVal + '/',
+		});
+	}
+	
+	function GetUsingData(){
+		gViewFlag = "using";
+		$("#id_a_del").removeAttr("style");
+		$("#id_a_using").attr("style","color:rgb(250,101,1)");
+		//显示按钮
+		$("#id_button_create").attr("style","display:block");
+		$("#id_button_edit").attr("style","display:block");
+		$("#id_button_del").attr("style","display:block");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:none");
+		
+		 style="display:none;"
+		
+		$('#table').bootstrapTable('refresh','{silent:true}');
+		
+	}
+	
+	function GetDelData(){
+		gViewFlag = "del";
+		$("#id_a_using").removeAttr("style");
+		$("#id_a_del").attr("style","color:rgb(250,101,1)");
+		//隐藏按钮
+		$("#id_button_create").attr("style","display:none");
+		$("#id_button_edit").attr("style","display:none");
+		$("#id_button_del").attr("style","display:none");
+		
+		//隐藏按钮
+		$("#id_button_restore_del").attr("style","display:block");
+		
+		$("#table").bootstrapTable('refresh',{
+			url: '/ansible/get_atom_task_data/del/empty_flag/',
+		});
+	}
+	
+	function JumpUpper(){
+		console.log('test');
+		location.href = "{% url 'asb_main_page_url' %}";
+	}
+
+</script>
+
+
+{% endblock %}

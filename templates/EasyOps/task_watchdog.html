@@ -1,0 +1,408 @@
+{% extends "common/base.side.html" %}
+
+{% block title %}
+	Watchdog TaskInfo
+{% endblock %}
+
+{% block rcontent %}
+	<div class="btn-toolbar">
+		<div class="btn-group">
+			{% url "task_watchdogurl" as thetask_watchdogurl %}
+			{% url "atom_task_watchdogurl" as the_atom_task_watchdogurl %}
+			{% url "realtime_task_watchdogurl" as the_realtime_task_watchdogurl %}
+			<a class="btn btn-default {%if request.path = thetask_watchdogurl or pro_flag = '0' %} active {%endif%}" href={{ thetask_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置定时备份工具</a>
+			<a class="btn btn-default {%if request.path = the_realtime_task_watchdogurl or pro_flag = '1' %} active {%endif%}" href={{ the_realtime_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>配置实时维护工具</a>
+			<a class="btn btn-default {% if request.path = the_atom_task_watchdogurl %} active {% endif %}" href={{ the_atom_task_watchdogurl }}><span class="glyphicon glyphicon-list"></span>原子任务管理</a>
+		</div>
+	</div>
+	<hr/>
+	
+	<table id="id_table_1" class="table table-hover">
+		<tr>
+			<td class="host_buttom">
+				<a class="btn btn-danger btn-xs" data-toggle="modal" data-target="#id_modal_add" onclick="AddTask()">新增</a>
+			</td>
+			<td class="host_buttom">
+				<a class="btn btn-warning btn-xs" onclick = "SelHostIp()">查询主机</a>
+			</td>
+		</tr>
+	</table>
+
+	<table class="table table-hover table-striped  table-bordered table-condensed">
+		<tr>
+			<th>插入时间</th>
+			<th>任务</th>
+			<th>主机</th>
+			<th>操作</th>
+			<th>用户</th>
+			<th>查看</th>
+		</tr>
+
+			{% for i in lPage %}
+				<tr style="font-size: 13px;">
+					<td>{{ i.insert_time|date:"Y-m-d H:i:s" }}</td>
+					<td><a style="cursor:pointer" onclick="GetTaskInfo( '{{i.task}}' )" }}>task-{{ i.id }}</td>
+					<td><a class="btn btn-success btn-xs" onclick="GetTaskHostInfo( '{{i.task_info}}' )" }}>查看</td>
+					<td class="host_buttom">
+						<a class="btn btn-warning btn-xs" onclick="EditTask('{{i.id}}','{{i.task_info}}')">编辑</a>
+						<a class="btn btn-danger btn-xs" href={% url 'del_task_watchdogurl' i.id %} onclick="return confirm('确认删除吗？')">删除</a>
+					</td>
+					<td>{{ i.operator }}</td>
+					<td class="host_buttom">
+						<a class="btn btn-primary btn-xs"  href={% url 'get_task_watchdogurl' i.id 1 0%} >监控明细</a>						
+					</td>
+				</tr>
+			{% endfor %}
+
+	</table>
+	
+	<!-- modal -->
+	<div id="id_modal_common" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 id="id_modal_common_title" class="modal-title"></h4>
+				</div>
+				<div class="modal-body" id="id_modal_common_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="id_modal_add" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" data-dismiss="modal" aria-hidden="true" class="close">&times;</button>
+					<h4 class="modal-title">新增定时备份命令</h4>
+				</div>
+				<div class="modal-body" id="id_modal_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="AddTaskSubmit()">提交</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="id_modal_edit" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title">编辑命令</h4>
+				</div>
+				<div class="modal-body" id="id_modal_edit_body"></div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="EditTaskSubmit()">编辑</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="id_modal_sel_ip" class="modal fade" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button class="close" type="button" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title">查询主机</h4>
+				</div>
+				<div class="modal-body" id="id_modal_edit_body">
+					<form action={% url "get_task_by_ip_watchdogurl" %} id="id_form_sel_ip" class="form-horizontal" role="form" method="POST">
+						{% csrf_token %}
+						
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button class="btn btn-default" type="button" data-dismiss="modal">关闭</button>
+					<button class="btn btn-primary" type="button" onclick="SelHostIpSubmit()">查询</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<script>
+		//说明表头字段
+		$(function(){
+			$('[data-toggle=tooltip]').tooltip();
+		})
+		
+		//全局变量
+		var SelAtomTaskIdArr = [];
+		var SelHostIdArr = [];
+		
+		
+		var aAtomTaskId	= [];
+		var aHostId = [];
+		var gTaskId = -1;
+		
+		$(function(){
+			ProProcess();			
+		})
+		
+		//----------------------------------
+		
+		function ProProcess(){
+			/*
+			*预处理函数
+			*/
+			//说明表头字段
+			$('[data-toggle=tooltip]').tooltip();
+			
+			//modal拖动
+			$("#id_modal_add,#id_modal_edit").draggable({
+				handle:".modal-header",
+				cursor:"move",
+				refreshPositions:false,
+			});
+			
+			//modal width
+			$(".modal-dialog").css('width','750px');
+		}
+		
+		function AddTask(){
+			//获取数据
+			$.ajax({
+				type:"GET",
+				url:"{% url 'get_atom_task_and_host_watchdogurl' %}",
+				success:function(data){
+					var aAtomTaskArr = data["page_data"]["task_info"];
+					var aHostArr = data["page_data"]["host_info"];
+					
+					
+					//删除id_div_body中已有的元素
+					$("#id_modal_body div").remove();
+					$("#id_modal_body").append($('<div id="id_atom_task_div"></div>'));
+					$("#id_modal_body").append($('<div id="id_host_div"></div>'));
+					$("#id_atom_task_div").append('<h5>选择原子命令</h5>');
+					$("#id_host_div").append('<h5>选择主机</h5>');
+					var MyTaskGrid = new bbGrid.View({        
+						container: $('#id_atom_task_div'),
+						enableSearch: true,
+						collection:  new Backbone.Collection(aAtomTaskArr),
+						rows:10,
+						colModel: [
+							{ title: 'ID', name: 'id', sorttype: 'number' },
+							//{ title: '插入时间', name: 'insert_time' },
+							{ title: '命令', name: 'task' }, 
+							{ title: '说明', name: 'task_info' }, 
+							{ title: '操作人', name: 'operator' }, 
+						],
+						multiselect:true,
+						selectedRows:SelAtomTaskIdArr,
+					});
+					var MyHostGrid = new bbGrid.View({        
+						container: $('#id_host_div'),
+						enableSearch: true,
+						collection:  new Backbone.Collection(aHostArr),
+						rows:10,
+						colModel: [
+							{ title: 'ID', name: 'id', sorttype: 'number' },
+							//{ title: '插入时间', name: 'insert_time' },
+							{ title: '主机IP', name: 'host_ip' },
+							{ title: '设备类型', name: 'operator' }, 
+						],
+						multiselect:true,
+						selectedRows:SelHostIdArr,
+					});
+					
+				}
+			});			
+		}
+		
+		function AddTaskSubmit(){			
+			//ajax			
+			$.ajaxSetup({
+				data:{csrfmiddlewaretoken: '{{ csrf_token }}'},
+			});
+			$.ajax({
+				type:"POST",
+				url:'{% url "add_realtime_task_watchdogurl" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					sel_atom_task:SelAtomTaskIdArr,
+					sel_host:SelHostIdArr,
+					opt_flag:0, //用于区分是task_watchdog还是realtime_task_watchdog
+				},
+				success:function(data){
+					window.location.href = '{% url "task_watchdogurl" %}';
+				}
+			});			
+		}
+		
+		function EditTask(TaskId,TaskInfo){
+			if(! confirm('确认编辑吗？')){
+				return;
+			}
+			
+			var Reg = /task_id:(.*);host_id:(.*);/g;
+			
+			var aMatchArr = (Reg.exec(TaskInfo));
+			
+			
+			//获取已经选择到的ID
+			aAtomTaskId = (aMatchArr[1]).split(";");
+			aHostId = (aMatchArr[2]).split(";");
+			gTaskId = TaskId;
+			
+			//转换成数字
+			for(var i = 0; i < aAtomTaskId.length;i++){
+				aAtomTaskId[i] = aAtomTaskId[i] - 0;
+			}
+			for(var i = 0; i < aHostId.length;i++){
+				aHostId[i] = aHostId[i] - 0;
+			}
+			
+			
+			//获取数据
+			$.ajax({
+				type:"GET",
+				url:"{% url 'get_atom_task_and_host_watchdogurl' %}",
+				success:function(data){
+					var aAtomTaskArr = data["page_data"]["task_info"];
+					var aHostArr = data["page_data"]["host_info"];
+					
+					//删除id_div_body中已有的元素
+					$("#id_modal_edit_body div").remove();
+					$("#id_modal_edit_body").append($('<div id="id_atom_task_edit_div"></div>'));
+					$("#id_modal_edit_body").append($('<div id="id_host_edit_div"></div>'));
+					$("#id_atom_task_edit_div").append('<h5>选择原子命令</h5>');
+					$("#id_host_edit_div").append('<h5>选择主机</h5>');
+					var MyTaskGrid = new bbGrid.View({        
+						container: $('#id_atom_task_edit_div'),
+						enableSearch: true,
+						collection:  new Backbone.Collection(aAtomTaskArr),
+						rows:10,
+						colModel: [
+							{ title: 'ID', name: 'id', sorttype: 'number' },
+							//{ title: '插入时间', name: 'insert_time' },
+							{ title: '命令', name: 'task' }, 
+							{ title: '说明', name: 'task_info' }, 
+							{ title: '操作人', name: 'operator' }, 
+						],
+						multiselect:true,
+						selectedRows:aAtomTaskId,
+					});
+					var MyHostGrid = new bbGrid.View({        
+						container: $('#id_host_edit_div'),
+						enableSearch: true,
+						collection:  new Backbone.Collection(aHostArr),
+						rows:10,
+						colModel: [
+							{ title: 'ID', name: 'id', sorttype: 'number' },
+							//{ title: '插入时间', name: 'insert_time' },
+							{ title: '主机IP', name: 'host_ip' },
+						],
+						multiselect:true,
+						selectedRows:aHostId,
+					});
+					
+					$("#id_modal_edit").modal();
+				}
+			});	
+			
+		}
+		
+		function EditTaskSubmit(){
+			
+			//ajax			
+			$.ajaxSetup({
+				data:{csrfmiddlewaretoken: '{{ csrf_token }}'},
+			});
+			$.ajax({
+				type:"POST",
+				url:'{% url "edit_task_watchdogurl" %}',
+				dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					sel_atom_task:aAtomTaskId,
+					sel_host:aHostId,
+					task_id:gTaskId, 
+				},
+				success:function(data){
+					window.location.href = '{% url "task_watchdogurl" %}';
+				}
+			});
+		}
+		
+		//查询主机的监控明细
+		function SelHostIp(){
+			//生成module
+			$("#id_form_sel_ip div").remove();
+			//填充
+			$("#id_form_sel_ip").append($('<div><div class="form-group"><label class="control-label col-md-2">主机IP</label><div class="col-md-5"><input class="form-control" cols="40" id="id_input_sel_ip" name="input_sel_ip" rows="10" placeholder="请输入主机IP"></div></div></div>'));
+			$("#id_modal_sel_ip").modal();
+		}
+		
+		//提交查询表单
+		function SelHostIpSubmit(){
+			//ip校验
+			var sIp = $("#id_input_sel_ip").val();
+			var re = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/g;
+			var aRet = re.exec(sIp);
+			if(!aRet){
+				alert("请输入合法IP");
+				return;
+			}
+			//提交
+			$("#id_form_sel_ip").submit();
+		}
+		
+		//根据【task_id:3;9;10;host_id:2;3;1;】信息，查询具体task_info、host ip，modal显示明细
+		function GetTaskHostInfo(sTaskInfo){
+			//console.log('test',sTaskInfo);
+			$.ajax({
+				type:"POST",
+				url:'{% url "get_task_host_watchdogurl" %}',
+				//dataType:"json",
+				data:{
+					csrfmiddlewaretoken: '{{ csrf_token }}',
+					taskinfo:sTaskInfo,
+					opt_flag:'normal', //或realtime
+				},
+				success:function(ret){
+					//console.log(ret);
+					//在modal中画表格，展示host信息
+					$("#id_modal_common_title").children().remove();
+					$("#id_modal_common_title").text('主机信息');
+					$("#id_modal_common_body").children().remove();					
+					$("#id_modal_common_body").append($('<div id="id_task_host_div"></div>'));
+					var MyTaskGrid = new bbGrid.View({        
+						container: $('#id_task_host_div'),        
+						collection:  new Backbone.Collection(ret['host_ip']),
+						rows:10,
+						colModel: [
+							{ title: 'ID', name: 'id', sorttype: 'number' },
+							{ title: '主机IP', name: 'host_ip' }, 
+							{ title: '登陆用户', name: 'host_user' }, 
+							{ title: 'su用户', name: 'host_su_user' }, 
+						],
+						multiselect:false,
+					});
+					
+					$("#id_modal_common").modal();
+				}		
+			});
+		}
+		
+		function GetTaskInfo(sTask){
+			sTask = sTask.replace(/;/g,"\n");
+			$("#id_modal_common_title").children().remove();
+			$("#id_modal_common_title").text('任务信息');
+			$("#id_modal_common_body").children().remove();
+			$("#id_modal_common_body").append($('<div>' + '<pre style = "background-color: #000000;color:#00bb00;font-size:15px">' + sTask + '</pre>' + '</div>'));
+			$("#id_modal_common").modal();			
+		}
+		
+	</script>
+	
+	
+	{% include "common/paginator.html" %}
+
+
+{% endblock %}

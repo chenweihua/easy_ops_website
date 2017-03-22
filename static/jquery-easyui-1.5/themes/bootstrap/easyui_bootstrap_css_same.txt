@@ -1,0 +1,17 @@
+      2 a
+      2 a:hover
+      2 body
+      2 input
+      2 li
+      2 .pagination
+      2 .panel
+      2 .panel-body
+      2 .panel-footer
+      2 .panel-title
+      2 span
+      2 table
+      2 td
+      2 th
+      2 .tooltip
+      2 .tooltip-arrow
+      2 ul

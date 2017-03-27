@@ -42,7 +42,8 @@
 										'netio_recv_mq',
 										'netio_send_mq',
 										'api_recv_mq',
-										'data_proc_recv_mq'
+										'data_proc_recv_mq',
+										'put_conn_mq_fail_cnt'
 				*/
 				var oTable = {};
 				
@@ -59,6 +60,7 @@
 						oData[sKey]['netio_send_mq'].push(data[i]['netio_send_mq']);
 						oData[sKey]['api_recv_mq'].push(data[i]['api_recv_mq']);
 						oData[sKey]['data_proc_recv_mq'].push(data[i]['data_proc_recv_mq']);
+						oData[sKey]['put_conn_mq_fail_cnt'].push(data[i]['put_conn_mq_fail_cnt']);
 					}
 					else{
 						oData[sKey] = {
@@ -70,6 +72,7 @@
 							'netio_send_mq' : [data[i]['netio_send_mq']],
 							'api_recv_mq' : [data[i]['api_recv_mq']],
 							'data_proc_recv_mq' : [data[i]['data_proc_recv_mq']],
+							'put_conn_mq_fail_cnt' : [data[i]['put_conn_mq_fail_cnt']],
 						};
 					}
 					
@@ -110,6 +113,7 @@
 				{ title: '网络IO发队列', name: 'netio_send_mq',index: true,sorttype: 'string' },
 				{ title: 'API收队列', name: 'api_recv_mq',index: true,sorttype: 'string' },
 				{ title: '数据处理收队列', name: 'data_proc_recv_mq',index: true,sorttype: 'string' },
+				{ title: 'conn发队列写入失败', name: 'put_conn_mq_fail_cnt',index: true,sorttype: 'string' },
 			],
 			buttons:[
 				{
@@ -155,8 +159,8 @@
 		var sKey = sDevIp + '_' + sDevType;
 		console.log(sKey);
 
-		var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列'];
-		var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq'];
+		var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
+		var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq','put_conn_mq_fail_cnt'];
 		var aTime = oData[sKey]['insert_time'];
 		var aSeries = [];
 		for (var i = 0; i < aTag.length; i++){
@@ -207,7 +211,7 @@
                 {
                     type : 'value',
                     axisLabel : {
-                        formatter: '{value} ' + '个/分',
+                        formatter: '{value} ',
                     }
                 }
             ],

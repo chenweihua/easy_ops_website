@@ -47,7 +47,8 @@ def frameworkHealthGetData(request):
                 'netio_recv_mq',
                 'netio_send_mq',
                 'api_recv_mq',
-                'data_proc_recv_mq'
+                'data_proc_recv_mq',
+                'put_conn_mq_fail_cnt'
                 )
         lDataTmp = []        
         for dKv in lData:

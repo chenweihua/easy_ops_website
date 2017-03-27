@@ -15,6 +15,7 @@ class CcFrameworkHeartbeatInfo(models.Model):
     netio_send_mq = models.IntegerField()
     api_recv_mq = models.IntegerField()
     data_proc_recv_mq = models.IntegerField()
+    put_conn_mq_fail_cnt = models.IntegerField()
     class Meta:
         managed = False
         db_table = 'cc_framework_heartbeat_info'

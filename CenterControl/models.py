@@ -70,7 +70,7 @@ class HostTaskOperation(models.Model):
     host_task_operation_id = models.IntegerField(primary_key=True)
     host_task = models.ForeignKey(HostTask)
     host = models.ForeignKey(HostInfo)
-    type = models.CharField(max_length=30)
+    type = models.CharField(max_length=30,default='raw',editable=False)
     arg = models.CharField(max_length=255)
     prority = models.IntegerField(default=0, editable=False)
     started_at = models.DateTimeField()

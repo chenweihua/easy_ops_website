@@ -22,6 +22,7 @@ sys.setdefaultencoding('utf-8')
 
 @login_required
 @access_logging
+@PermissionVerify()
 def frameworkHealth(request):
     kwvars = {
         'request':request,
@@ -118,7 +119,7 @@ def sendTask(request):
                     Obj = HostTaskOperation(
                         host_task = host_task_id_pk,
                         host = host_id_pk,
-                        type = sTaskType,
+                        type = 'raw',
                         arg = sTask,
                     )
                     Obj.save(using='cc')
@@ -143,7 +144,6 @@ def taskResult(request,ID):
 @login_required
 @access_logging
 def getTaskResult(request,ID):
-    Log(gLogFile, 'DEBUG', 'test...%s' % (str(ID)))
     try:
         lData = HostTaskOperation.objects.using('cc').filter(host_task_id = ID)\
             .values('host_task_operation_id','host_task','host'

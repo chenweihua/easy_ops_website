@@ -18,12 +18,13 @@
                                     <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" class="collapsed"><span class="glyphicon glyphicon-list-alt btn-xs"></span>运维工具</a>
                                 </h4>
                             </div>
-                            <div id="collapseOne" class="panel-collapse collapse {% if 'tools' in request.path or 'watchdog' in request.path or 'ansible' in request.path%} in {% endif %}">
+                            <div id="collapseOne" class="panel-collapse collapse {% if 'tools' in request.path or 'watchdog' in request.path or 'ansible' in request.path or 'cc' in request.path%} in {% endif %}">
                                 <div class="panel-body">
                                     <table class="table">
                                         <tbody>
                                             <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "task_watchdogurl" %}>大机配置监控</a></td></tr>
                                             <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "asb_main_page_url" %}>ansible自动化</a></td></tr>
+                                            <tr><td><span class="glyphicon glyphicon-tree-conifer btn-xs"></span><a href={% url "framework_health_url" %}>中控平台DEMO</a></td></tr>
                                         </tbody>
                                     </table>
                                 </div>

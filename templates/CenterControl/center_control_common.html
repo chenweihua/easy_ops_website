@@ -4,7 +4,10 @@
 <div class="btn-toolbar">
 	<div class="btn-group">
 		{% url "framework_health_url" as the_framework_health_url %}
+		{% url "send_task_url" as the_send_task_url %}
+		{% url "task_result"  as the_task_result_url %}
 		<a class="btn btn-default {%if request.path = the_framework_health_url %} active {%endif%}" href={{ the_framework_health_url }}><span class="glyphicon glyphicon-list"></span>健康度数据</a>
+		<a class="btn btn-default {%if request.path =  the_send_task_url or 'task_result' in request.path %} active {%endif%}" href={{ the_send_task_url }}><span class="glyphicon glyphicon-list"></span>下发任务</a>
 	</div>
 </div>
 <hr/>

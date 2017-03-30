@@ -1,0 +1,49 @@
+{% extends "CenterControl/center_control_common.html" %}
+
+{% block title %}
+	task result
+{% endblock %}
+
+{% block subcontent %}
+
+<table data-toggle="table"
+		id="table"
+		data-url= "/cc/get_task_result/{{task_id}}/"
+		data-pagination="true"
+		data-sort-name="host_task_operation_id"
+		data-sort-order="desc"
+	   >
+	<thead>
+	<tr>
+		<th data-field="host_task_operation_id" data-sortable="true">ID</th>
+		<th data-field="host_task" data-sortable="true">任务ID</th>
+		<th data-field="host" data-sortable="true">主机</th>
+		<th data-field="type" data-sortable="true">类型</th>
+		<th data-field="arg" data-sortable="true">命令</th>
+		<th data-field="prority" data-sortable="true">优先级</th>
+		<th data-field="started_at" data-sortable="true">开始时间</th>
+		<th data-field="ended_at" data-sortable="true">结束时间</th>
+		<th data-field="result" data-sortable="true">结果</th>
+		<th data-field="stdout" data-sortable="true">标准输出</th>
+		<th data-field="stderr" data-sortable="true">标准错误</th>
+	</tr>
+	</thead>
+</table>
+<script>
+    var $table = $('#table');
+
+	$(function () {
+		$table.on('click-row.bs.table', function (e, row, $element) {
+				$('.success').removeClass('success');
+				$($element).addClass('success');
+		});
+
+		ProProcess();
+	});
+
+	//-------------------------------------
+
+	function ProProcess()
+    {}
+</script>
+{% endblock %}

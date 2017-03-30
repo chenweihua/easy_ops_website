@@ -1,0 +1,92 @@
+{% extends "CenterControl/center_control_common.html" %}
+
+{% block title %}
+	send task
+{% endblock %}
+
+{% block subcontent %}
+<div>
+	<form action="" id="id_form_send_task" class="form-horizontal" role="form" method="POST">
+		{% csrf_token %}
+		<div class="form-group">
+			<label class="control-label col-md-1">任务</label>
+			<div class="col-md-4">
+				<textarea class="form-control" cols="60" id="id_tasks" name="atom_task" rows="30" style="width:400px;height:200px;" placeholder="支持多条任务，用分号分隔"></textarea>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label class="control-label col-md-1">主机</label>
+			<div class="col-md-4">
+				<textarea class="form-control" cols="60" id="id_hosts" name="statement" rows="30" style="width:400px;height:200px;" placeholder="支持多台主机，用分号分隔"></textarea>
+			</div>
+		</div>
+
+		<div id="id_select" class="form-group">
+			<label class="control-label col-md-1">探测类型</label>
+			<div class="col-md-2">
+				<select id="id_task_type" class="form-control" onchange="onSelect()" style="width:400px">
+					<option value="0">实时任务</option>
+					<option value="1" selected>定时任务</option>
+				</select>
+			</div>
+		</div>
+		<div id="id_contab" style="display: block">
+			<div class="form-group">
+				<label class="control-label col-md-1">contab</label>
+				<div class="col-md-4">
+					<input type="text" class="form-control" id="id_contab_text" style="width:400px" placeholder="contab格式输入（例如1 */10 * * *）" >
+				</div>
+			</div>
+		</div>
+		<div class="form-group">
+			<div class="col-md-offset-1 col-md-10">
+				<button class="btn btn-primary" type="button" onclick="sendTask()">提交</button>
+			</div>
+
+		</div>
+	</form>
+</div>
+
+<script>
+	$(function(){
+		//全局变量
+
+		procProcess();
+	});
+
+	function procProcess() {
+
+    }
+
+    function onSelect() {
+		console.log($("#id_task_type").val());
+		var task_type = $("#id_task_type").val();
+		if(task_type == 'realtime_task'){
+			$("#id_contab").css('display','none');
+		}
+		else{
+			$("#id_contab").css('display','block');
+		}
+    }
+    
+    function sendTask() {
+		$.ajax({
+		    type:"POST",
+			url:'{% url "send_task_url" %}',
+			dataType:'json',
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				id_tasks:$("#id_tasks").val(),
+				id_hosts:$("#id_hosts").val(),
+				id_task_type:$("#id_task_type").val(),
+				id_contab_text:$("#id_contab_text").val(),
+			},
+			success:function (data) {
+				console.log(data);
+				window.location.href = "/cc/task_result/" + data['id'] + "/";
+            }
+		});
+    }
+</script>
+{% endblock %}

@@ -98,6 +98,7 @@ def sendTask(request):
                 timer_flag = sTaskType,
                 timer_on = 1,
                 timer_crontab = sContab,
+                starts_flag=1,
             )
             Obj.save(using='cc')
             host_task_id = Obj.host_task_id
@@ -124,6 +125,9 @@ def sendTask(request):
                     )
                     Obj.save(using='cc')
 
+            #替老王擦屁股
+            HostTask.objects.using('cc').filter(host_task_id = host_task_id)\
+                .update(starts_flag = 0)
 
         except BaseException,e:
             Log(gLogFile,'ERROR',str(e))

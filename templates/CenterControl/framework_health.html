@@ -6,21 +6,74 @@
 
 {% block subcontent %}
 <div id="id_div_table"></div>
-<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px; visibility:hidden"></div>
+<!--<div id="id_all_graph" style="display: none">-->
+<div id="id_all_graph" style="visibility:hidden">
+	<div id = "TimeDiv" style = "height:55px;border:1px solid #ccc;padding:10px;">
+		<label class="control-label col-md-1">开始</label>
+		<div class="col-md-3">
+			<input class="form-control" id="id_s_date" name="name_date" type="text" onchange = "getData(this.value,'s')"/>
+		</div>
+		<label class="control-label col-md-1">结束</label>
+		<div class="col-md-3">
+			<input class="form-control" id="id_e_date" name="name_date" type="text" onchange = "getData(this.value,'e')"/>
+		</div>
+	</div>
+	<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
+</div>
+
 
 
 
 <script>
 	var oData = {};
 	var aTable = [];
+	var sDevIp = '';
+	var sDevType = '';
 	$(function(){
-		QueryFunction(); //默认获取全部信息
+		getTableData(); //默认获取全部信息
 		getTable();
+		initDate();
 	});
 	
 	//----------------------------------
-		
-	function QueryFunction(){
+	function initDate() {
+        //时间
+        var today = new Date();
+        var sDateNow = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+
+        $("#id_s_date").val(sDateNow);
+        $("#id_s_date").datetimepicker({
+            language: 'zh-CN',
+            weekStart: 1,
+            todayBtn: 1,
+            autoclose: 1,
+            todayHighlight: 1,
+            startView: 2,
+            minView: 2,
+            forceParse: 0,
+            format: 'yyyy-mm-dd',
+            todayBtn: 1,
+        });
+
+        $("#id_e_date").val(sDateNow);
+        $("#id_e_date").datetimepicker({
+            language: 'zh-CN',
+            weekStart: 1,
+            todayBtn: 1,
+            autoclose: 1,
+            todayHighlight: 1,
+            startView: 2,
+            minView: 2,
+            forceParse: 0,
+            format: 'yyyy-mm-dd',
+            todayBtn: 1,
+        });
+
+        //第一次启动时获取数据
+//        GetData('', 'first_time');
+    }
+
+	function getTableData(){
 		$.ajax({
 			type:"POST",
 			url:'{% url "framework_health_get_data_url" %}',
@@ -30,57 +83,13 @@
 			},
 			async:false,
 			success:function(data){
-				console.log(data);
-				
-				/*
-				将数据拆分
-				type: devip + dev_type(controler|probe) ->
-										insert_time arr
-										'recv_cnt',
-										'send_cnt',
-										'log_mq',
-										'netio_recv_mq',
-										'netio_send_mq',
-										'api_recv_mq',
-										'data_proc_recv_mq',
-										'put_conn_mq_fail_cnt'
-				*/
 				var oTable = {};
-				
 				for (var i in data){
 					dev_ip = data[i]['dev_ip'];
 					dev_type = data[i]['dev_type'];
 					sKey = dev_ip + '_' + dev_type;
-					if (oData[sKey]){
-						oData[sKey]['insert_time'].push(data[i]['insert_time']);
-						oData[sKey]['recv_cnt'].push(data[i]['recv_cnt']);
-						oData[sKey]['send_cnt'].push(data[i]['send_cnt']);
-						oData[sKey]['log_mq'].push(data[i]['log_mq']);
-						oData[sKey]['netio_recv_mq'].push(data[i]['netio_recv_mq']);
-						oData[sKey]['netio_send_mq'].push(data[i]['netio_send_mq']);
-						oData[sKey]['api_recv_mq'].push(data[i]['api_recv_mq']);
-						oData[sKey]['data_proc_recv_mq'].push(data[i]['data_proc_recv_mq']);
-						oData[sKey]['put_conn_mq_fail_cnt'].push(data[i]['put_conn_mq_fail_cnt']);
-					}
-					else{
-						oData[sKey] = {
-							'insert_time' : [data[i]['insert_time']],
-							'recv_cnt' : [data[i]['recv_cnt']],
-							'send_cnt' : [data[i]['send_cnt']],
-							'log_mq' : [data[i]['log_mq']],
-							'netio_recv_mq' : [data[i]['netio_recv_mq']],
-							'netio_send_mq' : [data[i]['netio_send_mq']],
-							'api_recv_mq' : [data[i]['api_recv_mq']],
-							'data_proc_recv_mq' : [data[i]['data_proc_recv_mq']],
-							'put_conn_mq_fail_cnt' : [data[i]['put_conn_mq_fail_cnt']],
-						};
-					}
-					
 					oTable[sKey] = data[i];
 				}
-				
-				console.log(oData);
-				console.log(oTable);
 				
 				var iId = 0;
 				for (sKey in oTable){
@@ -89,14 +98,46 @@
 					iId++;
 				}
 				console.log(aTable);
-				
 			}
-		})
-	}	
+		});
+	}
+
+	function procData(data) {
+	    oData = {};
+        for (var i in data){
+            dev_ip = data[i]['dev_ip'];
+            dev_type = data[i]['dev_type'];
+            sKey = dev_ip + '_' + dev_type;
+            if (oData[sKey]){
+                oData[sKey]['insert_time'].push(data[i]['insert_time']);
+                oData[sKey]['recv_cnt'].push(data[i]['recv_cnt']);
+                oData[sKey]['send_cnt'].push(data[i]['send_cnt']);
+                oData[sKey]['log_mq'].push(data[i]['log_mq']);
+                oData[sKey]['netio_recv_mq'].push(data[i]['netio_recv_mq']);
+                oData[sKey]['netio_send_mq'].push(data[i]['netio_send_mq']);
+                oData[sKey]['api_recv_mq'].push(data[i]['api_recv_mq']);
+                oData[sKey]['data_proc_recv_mq'].push(data[i]['data_proc_recv_mq']);
+                oData[sKey]['put_conn_mq_fail_cnt'].push(data[i]['put_conn_mq_fail_cnt']);
+            }
+            else{
+                oData[sKey] = {
+                    'insert_time' : [data[i]['insert_time']],
+                    'recv_cnt' : [data[i]['recv_cnt']],
+                    'send_cnt' : [data[i]['send_cnt']],
+                    'log_mq' : [data[i]['log_mq']],
+                    'netio_recv_mq' : [data[i]['netio_recv_mq']],
+                    'netio_send_mq' : [data[i]['netio_send_mq']],
+                    'api_recv_mq' : [data[i]['api_recv_mq']],
+                    'data_proc_recv_mq' : [data[i]['data_proc_recv_mq']],
+                    'put_conn_mq_fail_cnt' : [data[i]['put_conn_mq_fail_cnt']],
+                };
+            }
+        }
+    }
 
 	function getTable(){
 		$("#id_div_table").children().remove();
-		var MyTaskGrid = new bbGrid.View({        
+		var MyTaskGrid = new bbGrid.View({
 			container: $('#id_div_table'),
 			enableSearch: true,
 			collection:  new Backbone.Collection(aTable),
@@ -104,10 +145,10 @@
 			rowList: [20,40,80],
 			colModel: [
 				{ title: '插入时间', name: 'insert_time',index: true,sorttype: 'string' },
-				{ title: 'IP', name: 'dev_ip',index: true,sorttype: 'string' }, 
-				{ title: '类型', name: 'dev_type',index: true,sorttype: 'string' }, 
-				{ title: '收包数/分', name: 'recv_cnt',index: true,sorttype: 'number' }, 
-				{ title: '发包数/分', name: 'send_cnt',index: true,sorttype: 'number' }, 
+				{ title: 'IP', name: 'dev_ip',index: true,sorttype: 'string' },
+				{ title: '类型', name: 'dev_type',index: true,sorttype: 'string' },
+				{ title: '收包数/分', name: 'recv_cnt',index: true,sorttype: 'number' },
+				{ title: '发包数/分', name: 'send_cnt',index: true,sorttype: 'number' },
 				{ title: '日志队列', name: 'log_mq',index: true,sorttype: 'number' },
 				{ title: '网络IO收队列', name: 'netio_recv_mq',index: true,sorttype: 'string' },
 				{ title: '网络IO发队列', name: 'netio_send_mq',index: true,sorttype: 'string' },
@@ -148,28 +189,16 @@
 			symbol: 'none',
 		};
 	}
-	
-	function getGraph(Models){
-		if (_.isEmpty(Models)){
-			alert('请选择要查询的列');
-			return;
-		}
-		var sDevIp = _.first(Models).get('dev_ip');
-		var sDevType = _.first(Models).get('dev_type');
-		var sKey = sDevIp + '_' + sDevType;
-		console.log(sKey);
 
-		var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
+	function createGraph() {
+        var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
 		var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq','put_conn_mq_fail_cnt'];
 		var aTime = oData[sKey]['insert_time'];
 		var aSeries = [];
 		for (var i = 0; i < aTag.length; i++){
-			console.log(i);
 			aSeries.push(getSeries(aTag[i],oData[sKey][aFlag[i]]));
 		}
-		console.log(aSeries);
-		
-		
+
 		var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
 		options = {
 			title : {
@@ -187,7 +216,6 @@
             },
             legend: {
                 data:aTag,
-                //data:aTag,
             },
             toolbox: {
                 show : true,
@@ -218,17 +246,69 @@
             series : aSeries,
 		};
 		MyChart.setOption(options);
-		
+
 		//重新变更图大小
 		window.onresize = MyChart.resize;
-		
-		$("#id_div_mainPie").css('visibility','visible');
-		
-		
-		
-		
+
+//		$("#id_div_mainPie").css('visibility','visible');
+		$("#id_all_graph").css('visibility','visible');
+    }
+
+	function getGraph(Models){
+		if (_.isEmpty(Models)){
+			alert('请选择要查询的列');
+			return;
+		}
+		sDevIp = _.first(Models).get('dev_ip');
+		sDevType = _.first(Models).get('dev_type');
+        var today = new Date();
+		var sDateNow = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+		$("#id_s_date").val(sDateNow);
+		$("#id_e_date").val(sDateNow);
+		getData('','first_time');
 	}
-	
+
+
+	function getData(sDate,sFlag){
+
+        var sStartDate = '';
+        var sEndDate = '';
+        if(sFlag === 's'){
+            sStartDate = sDate;
+            sEndDate = $('input[id=id_e_date]').val();
+        }
+        else if(sFlag === 'e'){
+            sStartDate = $('input[id=id_s_date]').val();
+            sEndDate = sDate;
+        }
+        else if(sFlag === 'first_time'){
+            sStartDate = $('input[id=id_s_date]').val();
+            sEndDate = $('input[id=id_e_date]').val();
+        }
+
+        console.log(sStartDate);
+        console.log(sEndDate);
+
+        $.ajax({
+		    type:"POST",
+			url:'{% url "framework_health_get_the_data_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				start_data:sStartDate,
+				end_data:sEndDate,
+                dev_ip:sDevIp,
+                dev_type:sDevType,
+			},
+			async:false,
+			success:function(data){
+				console.log(data);
+                procData(data);
+            }
+        });
+
+        createGraph();
+    }
 </script>
 {% endblock %}
 

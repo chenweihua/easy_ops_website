@@ -97,7 +97,6 @@
 					aTable.push(oTable[sKey]);
 					iId++;
 				}
-				console.log(aTable);
 			}
 		});
 	}
@@ -286,8 +285,6 @@
             sEndDate = $('input[id=id_e_date]').val();
         }
 
-        console.log(sStartDate);
-        console.log(sEndDate);
 
         $.ajax({
 		    type:"POST",
@@ -302,7 +299,6 @@
 			},
 			async:false,
 			success:function(data){
-				console.log(data);
                 procData(data);
             }
         });

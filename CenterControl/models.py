@@ -1,5 +1,7 @@
 #-*- coding: utf-8 -*-
 from django.db import models
+import hashlib
+from django.core.files.storage import FileSystemStorage
 
 # Create your models here.
         
@@ -61,6 +63,7 @@ class HostTask(models.Model):
     stdout = models.TextField(blank=True)
     stderr = models.TextField(blank=True)
     del_flag = models.IntegerField(default=0, editable=False)
+    tab_date_time = models.DateTimeField()
     class Meta:
         managed = False
         db_table = 'host_task'
@@ -68,8 +71,9 @@ class HostTask(models.Model):
 
 class HostTaskOperation(models.Model):
     host_task_operation_id = models.IntegerField(primary_key=True)
-    host_task = models.ForeignKey(HostTask)
-    host = models.ForeignKey(HostInfo)
+    tab_date_time = models.DateTimeField()
+    host_task_id = models.IntegerField()
+    host_id = models.IntegerField()
     type = models.CharField(max_length=30,default='raw',editable=False)
     arg = models.CharField(max_length=255)
     prority = models.IntegerField(default=0, editable=False)
@@ -81,3 +85,42 @@ class HostTaskOperation(models.Model):
     class Meta:
         managed = False
         db_table = 'host_task_operation'
+
+#文件
+class MediaFileSystemStorage(FileSystemStorage):
+    def get_available_name(self, name, max_length=None):
+        if max_length and len(name) > max_length:
+            raise(Exception("name's length is greater than max_length"))
+        return name
+
+    def _save(self, name, content):
+        if self.exists(name):
+            # if the file exists, do not call the superclasses _save method
+            return name
+        # if the file is new, DO call it
+        return super(MediaFileSystemStorage, self)._save(name, content)
+
+def uploadFun(instance,filename):
+    sMd5 = instance.md5sum
+    return "cc/%s@_@%s"%(filename,sMd5)
+
+class CcFileInfo(models.Model):
+    insert_time = models.DateTimeField()
+    id = models.AutoField(primary_key=True)
+    file_name = models.CharField(max_length=255)
+
+    file_path = models.FileField(
+        upload_to=uploadFun, storage=MediaFileSystemStorage())
+    md5sum = models.CharField(max_length=36)
+    class Meta:
+        managed = False
+        db_table = 'cc_file_info'
+
+    def save(self,*args,**kwargs):
+        if not self.pk:  # file is new
+            md5 = hashlib.md5()
+            for chunk in self.file_path.chunks():
+                md5.update(chunk)
+            self.md5sum = md5.hexdigest()
+        super(CcFileInfo, self).save(*args, **kwargs)
+

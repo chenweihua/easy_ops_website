@@ -99,6 +99,19 @@ def GetStrMd5(sStr):
     m.update(sStr)
     return m.hexdigest()
 
+
+def getFileMd5(sPath):
+    try:
+        m = hashlib.md5()
+        with open(sPath,'rb') as Fd:
+            while True:
+                sData = Fd.read(128)
+                if not sData:
+                    break
+                m.update(sData)
+            return m.hexdigest()
+    except BaseException,e:
+        return ''
     
     
     

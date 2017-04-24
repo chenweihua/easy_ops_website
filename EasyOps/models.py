@@ -2,7 +2,7 @@
 from django.db import models
 
 # Create your models here.
-            
+
 
 #配置监控系统主机信息表
 class WdHostInfo(models.Model):
@@ -20,7 +20,7 @@ class WdHostInfo(models.Model):
     class Meta:
         managed = False
         db_table = 'wd_host_info'
-        
+
 class WdRealtimeHostInfo(models.Model):
     insert_time = models.DateTimeField()
     id = models.AutoField(primary_key=True)
@@ -49,7 +49,7 @@ class WdTaskInfo(models.Model):
     mail_recv = models.CharField(max_length=256)
     class Meta:
         managed = False
-        db_table = 'wd_task_info' 
+        db_table = 'wd_task_info'
 
 
 #配置监控系统任务映射表
@@ -68,9 +68,9 @@ class WdTaskHostMap(models.Model):
     class Meta:
         managed = False
         db_table = 'wd_task_host_map'
-        
+
 #配置监控系统原子命令表
-class WdAtomTaskInfo(models.Model):                                                                                                                
+class WdAtomTaskInfo(models.Model):
     insert_time = models.DateTimeField()
     id = models.AutoField(primary_key=True)
     task = models.TextField(blank=True)
@@ -95,7 +95,7 @@ class WdRealtimeTaskInfo(models.Model):
         managed = False
         db_table = 'wd_realtime_task_info'
 
-        
+
 #配置监控系统实时任务映射表
 class WdRealtimeTaskHostMap(models.Model):
     insert_time = models.DateTimeField()

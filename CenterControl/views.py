@@ -147,8 +147,8 @@ def sendTask(request):
             sTaskType = request.POST.get('id_task_type','')
             sContab = request.POST.get('id_contab_text','')
 
-            lTasks = sTasks.split('\n')
-            lHosts = sHosts.split('\n')
+            lTasks = map(lambda x: x.strip(),sTasks.split('\n'))
+            lHosts = map(lambda x: x.strip(), sHosts.split('\n'))
 
             Obj = HostTask(
                 name = 'test task',
@@ -156,12 +156,13 @@ def sendTask(request):
                 timer_on = 1,
                 timer_crontab = sContab,
                 starts_flag=1,
+                tab_date_time=GetTimeDayStr_(),
             )
             Obj.save(using='cc')
             host_task_id = Obj.host_task_id
             kwvars['id'] = host_task_id
-            host_task_id_pk = HostTask.objects.using('cc')\
-                .get(host_task_id = host_task_id)
+            # host_task_id_pk = HostTask.objects.using('cc')\
+            #     .get(host_task_id = host_task_id)
 
             for sHost in lHosts:
                 if sHost == '':
@@ -170,19 +171,20 @@ def sendTask(request):
                     .values('host_id')
                 if not host_id:
                     continue
-
-                host_id_pk = HostInfo.objects.using('cc').get(host_id = host_id)
-                if not host_id_pk:
-                    continue
+                host_id = host_id[0]['host_id']
+                # host_id_pk = HostInfo.objects.using('cc').get(host_id = host_id)
+                # if not host_id_pk:
+                #     continue
 
                 for sTask in lTasks:
                     if sTask == '':
                         continue
                     Obj = HostTaskOperation(
-                        host_task = host_task_id_pk,
-                        host = host_id_pk,
+                        host_task_id = host_task_id,
+                        host_id = host_id,
                         type = 'raw',
                         arg = sTask,
+                        tab_date_time=GetTimeDayStr_(),
                     )
                     Obj.save(using='cc')
 
@@ -211,18 +213,18 @@ def taskResult(request,ID):
 def getTaskResult(request,ID):
     try:
         lData = HostTaskOperation.objects.using('cc').filter(host_task_id = ID)\
-            .values('host_task_operation_id','host_task','host'
+            .values('host_task_operation_id','host_task_id','host_id'
                     ,'type','arg','prority','started_at','ended_at'
                     ,'result','stdout','stderr')
         lDataRet = []
         for dKv in lData:
-            lTmp = HostInfo.objects.using('cc').filter(host_id = dKv['host']).values('host')
+            lTmp = HostInfo.objects.using('cc').filter(host_id = dKv['host_id']).values('host')
             if not lTmp:
                 continue
             host = lTmp[0]['host']
             lDataRet.append({
                 'host_task_operation_id': dKv['host_task_operation_id'],
-                'host_task': dKv['host_task'],
+                'host_task': dKv['host_task_id'],
                 'host': host,
                 'type': dKv['type'],
                 'arg': dKv['arg'],
@@ -237,3 +239,84 @@ def getTaskResult(request,ID):
     except BaseException,e:
         Log(gLogFile, 'ERROR', str(e))
     return HttpResponse(json.dumps(lDataRet), content_type='application/json')
+
+@login_required
+@access_logging
+def sendFile(request):
+    try:
+        if request.method == "GET":
+            kwvars = {
+                'request': request,
+            }
+            return render_to_response('CenterControl/send_file.html'
+                                      , kwvars, RequestContext(request))
+        elif request.method == "POST":
+            kwvars = {
+                'ret': 0,
+                'id': 'none',
+            }
+
+            Obj = CcFileInfo(
+                file_name=str(request.FILES['load_file']),
+                file_path=request.FILES['load_file'],
+            )
+            Obj.save(using='cc')
+
+            sFileName = str(request.FILES['load_file'])
+            sMd5sum = Obj.md5sum
+            sHosts = request.POST.get('hosts', '')
+            sDstPath = request.POST.get('dst_path', '').strip()
+            lHosts = map(lambda x:x.strip(),sHosts.split('\n'))
+            sTask = json.dumps(
+                {
+                    "src":sFileName,
+                    "dest":sDstPath,
+                    "md5":sMd5sum,
+                }
+            )
+
+            Obj = HostTask(
+                name='test task',
+                timer_flag=0,
+                timer_on=1,
+                timer_crontab='',
+                starts_flag=1,
+                tab_date_time=GetTimeDayStr_(),
+            )
+            Obj.save(using='cc')
+            host_task_id = Obj.host_task_id
+            kwvars['id'] = host_task_id
+            # host_task_id_pk = HostTask.objects.using('cc') \
+            #     .get(host_task_id=host_task_id)
+
+            for sHost in lHosts:
+                Log(gLogFile,"DEBUG",sHost)
+                if sHost == '':
+                    continue
+                host_id = HostInfo.objects.using('cc').filter(host = sHost)\
+                    .values('host_id')
+                if not host_id:
+                    continue
+                host_id = host_id[0]['host_id']
+                # host_id_pk = HostInfo.objects.using('cc').get(host_id = host_id)
+                # if not host_id_pk:
+                #     continue
+                Obj = HostTaskOperation(
+                    host_task_id=host_task_id,
+                    host_id=host_id,
+                    type='raw',
+                    arg=sTask,
+                    tab_date_time=GetTimeDayStr_(),
+                )
+                Obj.save(using='cc')
+
+            HostTask.objects.using('cc').filter(host_task_id = host_task_id)\
+                .update(starts_flag = 0)
+
+    except BaseException,e:
+        Log(gLogFile, 'ERROR', str(e))
+    # return HttpResponse(json.dumps(kwvars), content_type='application/json')
+    Log(gLogFile, 'DEBUG', str(kwvars))
+    return HttpResponseRedirect("/cc/task_result/%s/"%(kwvars["id"]))
+
+

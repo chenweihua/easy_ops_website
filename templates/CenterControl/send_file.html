@@ -1,0 +1,56 @@
+{% extends "CenterControl/center_control_common.html" %}
+
+{% block title %}
+	send task
+{% endblock %}
+
+{% block subcontent %}
+<div>
+	<form action="/cc/send_file/" id="id_form_send_file" class="form-horizontal" role="form" method="POST" enctype="multipart/form-data">
+		{% csrf_token %}
+		<div class="form-group">
+			<label class="control-label col-md-1">主机</label>
+			<div class="col-md-4">
+				<textarea class="form-control" cols="60" id="id_hosts" name="hosts" rows="30" style="width:400px;height:200px;resize: none;" placeholder="支持多台主机，用换行分隔"></textarea>
+			</div>
+		</div>
+
+        <div class="form-group">
+			<label class="control-label col-md-1">目标</label>
+			<div class="col-md-4">
+				<input class="form-control" cols="60" id="id_dst_path" name="dst_path" style="width:400px;" placeholder="目标路径（例：/tmp/）">
+			</div>
+		</div>
+
+        <div class="form-group">
+            <label class="control-label col-md-1">文件</label>
+            <div class="col-md-4">
+                <input class="form-control" style="width:400px" name="load_file" type="file">
+            </div>
+        </div>
+
+		<div class="form-group">
+			<div class="col-md-offset-1 col-md-10">
+				<button class="btn btn-primary" type="button" onclick="UpdateCreateLoadFile()">提交</button>
+			</div>
+		</div>
+	</form>
+</div>
+
+<script>
+	$(function(){
+		//全局变量
+
+		procProcess();
+	});
+
+	function procProcess() {
+
+    }
+
+    function UpdateCreateLoadFile(){
+        $("#id_form_send_file").submit();
+    }
+
+</script>
+{% endblock %}

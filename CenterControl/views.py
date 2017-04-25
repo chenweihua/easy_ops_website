@@ -261,6 +261,7 @@ def sendFile(request):
                 file_path=request.FILES['load_file'],
             )
             Obj.save(using='cc')
+            Log(gLogFile,"DEBUG",str(myScp(str(Obj.file_path)[3:])))
 
             sFileName = str(request.FILES['load_file'])
             sMd5sum = Obj.md5sum
@@ -304,7 +305,7 @@ def sendFile(request):
                 Obj = HostTaskOperation(
                     host_task_id=host_task_id,
                     host_id=host_id,
-                    type='raw',
+                    type='scp',
                     arg=sTask,
                     tab_date_time=GetTimeDayStr_(),
                 )
@@ -317,6 +318,6 @@ def sendFile(request):
         Log(gLogFile, 'ERROR', str(e))
     # return HttpResponse(json.dumps(kwvars), content_type='application/json')
     Log(gLogFile, 'DEBUG', str(kwvars))
-    return HttpResponseRedirect("/cc/task_result/%s/"%(kwvars["id"]))
+    return HttpResponseRedirect("/cc/send_result/%s/"%(kwvars["id"]))
 
 

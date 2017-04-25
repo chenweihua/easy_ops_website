@@ -125,3 +125,10 @@ MEDIA_URL = '/media/'
 #redis host,port
 REDIS_HOST = "192.168.235.129"
 REDIS_PORT = "6379"
+
+#Center Control SCP
+DST_HOST = "192.168.235.134"
+DST_USR = "root"
+DST_PSW = "datacenter@secu"
+SRC_WEB_DIR = "/data/web/easy_ops_website/media/cc/"
+DST_NAS_DIR = "/tmp/"

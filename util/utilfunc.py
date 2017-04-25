@@ -26,6 +26,10 @@ from easy_ops_website.common.CommonPaginator import SelfPaginator
 from utilmodels import *
 from utilvar import *
 
+import paramiko
+import scp
+
+
 def GetTimeDayStr_():
     '''
     获取日期，字符串格式
@@ -112,7 +116,24 @@ def getFileMd5(sPath):
             return m.hexdigest()
     except BaseException,e:
         return ''
-    
+
+
+def myScp(sFileName):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        ssh.connect(hostname=settings.DST_HOST, port=22,
+                    username=settings.DST_USR, password=settings.DST_PSW, timeout=1)
+    except BaseException,e:
+        return (False, str(e))
+
+    Scp = scp.SCPClient(ssh.get_transport())
+    try:
+        Scp.put("%s%s"%(settings.SRC_WEB_DIR,sFileName)
+                , '%s%s' % (settings.DST_NAS_DIR,sFileName))
+    except BaseException, e:
+        return (False, "deb 1 %s"%(str(e)))
+    return (True, 'succ')
     
     
     

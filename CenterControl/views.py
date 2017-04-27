@@ -351,6 +351,17 @@ def judgeApiFormat(dPayload):
         if dPayload["type"] == "process":
             if "cmds" not in dPayload:
                 raise Exception("cmd not in request.")
+            if "host_ip" not in dPayload:
+                raise Exception("host_ip not in request.")
+            if not isinstance(dPayload["host_ip"],list):
+                raise Exception("host_ip must be list.")
+            for sIp in dPayload["host_ip"]:
+                if JudgeIpFormat(sIp) == False:
+                    raise Exception("ip %s format error."%(sIp))
+        elif dPayload["type"] == "query":
+            if "task_id" not in dPayload:
+                raise Exception("task_id not in request.")
+        elif dPayload["type"] == "add_host":
             if "hosts" not in dPayload:
                 raise Exception("host not in request.")
             for dHost in dPayload["hosts"]:
@@ -358,15 +369,11 @@ def judgeApiFormat(dPayload):
                     raise Exception("host_ip not in request.")
                 if JudgeIpFormat(dHost["host_ip"]) == False:
                     raise Exception("ip %s format error."%(dHost["host_ip"]))
-                if len(dHost) >= 2:
-                    for dKey in dHost:
-                        if dKey not in ("host_port","host_ip"
-                                        ,"host_user","host_passwd"
-                                        ,"host_su_user","host_su_passwd"):
-                            raise Exception("%s not in request."%(dKey))
-        elif dPayload["type"] == "query":
-            if "task_id" not in dPayload:
-                raise Exception("task_id not in request.")
+                for dKey in dHost:
+                    if dKey not in ("host_port", "host_ip"
+                                    , "host_user", "host_passwd"
+                                    , "host_su_user", "host_su_passwd"):
+                        raise Exception("%s not in request." % (dKey))
         else:
             raise Exception("unknown request type %s."%(dPayload["type"]))
 
@@ -407,10 +414,12 @@ def ccApi(request):
                         "return": retInfo,
                     })
                 else:
-                    if dPayload['type'] == 'process':
+                    if dPayload["type"] == "process":
                         (sendRet, retInfo) =  sendTaskFromApi(dPayload)
-                    elif dPayload['type'] == 'query':
+                    elif dPayload["type"] == "query":
                         (sendRet, retInfo) = queryTaskResultFromApi(dPayload)
+                    elif dPayload["type"] == "add_host":
+                        (sendRet, retInfo) = addHostFromApi(dPayload)
                     dRet = retInfo
 
     except BaseException, e:
@@ -432,7 +441,7 @@ def sendTaskFromApi(dPayload):
             "return": "none",
         }
 
-        lHost = dPayload["hosts"]
+        lHost = dPayload["host_ip"]
         lTask = dPayload["cmds"]
 
         # 写入任务表，获取到host_task_id
@@ -454,49 +463,17 @@ def sendTaskFromApi(dPayload):
         #   则更新账号和密码。
         #
         lHostId = []
-        for dHost in lHost:
-            if len(dHost) >= 2:
-                #新增主机的场景
-                #重复的主机-usr-su_usr会update
-                iCount = HostInfo.objects.using("cc").filter(host=dHost["host_ip"]
-                                        ,user=dHost["host_user"]
-                                        ,become_user=dHost["host_su_user"]).count()
-                if iCount:
-                    host_id = HostInfo.objects.using("cc")\
-                        .filter(host=dHost["host_ip"]
-                                ,user=dHost["host_user"]
-                                ,become_user=dHost["host_su_user"])\
-                        .values("host_id")[0]["host_id"]
-
-                    HostInfo.objects.using("cc").filter(host_id=host_id)\
-                        .update(port=dHost["host_port"]
-                                ,ssh_pass=dHost["host_passwd"]
-                                ,become_pass=dHost["host_su_passwd"]
-                                ,updated_at=GetTimeNowStr())
-
-                else:
-                    Obj = HostInfo(host=dHost["host_ip"]
-                                   ,user=dHost["host_user"]
-                                   ,become_user=dHost["host_su_user"]
-                                   ,port=dHost["host_port"]
-                                   ,ssh_pass=dHost["host_passwd"]
-                                   ,become_pass=dHost["host_su_passwd"]
-                                   ,updated_at=GetTimeNowStr())
-                    Obj.save(using="cc")
-                    host_id = Obj.host_id
-                    Log(gLogFile,"DEBUG","deb 1,%s"%(host_id))
+        for sHostIp in lHost:
+            #已有主机IP的场景
+            #todo：此处有缺陷，若存在多个相同的host_ip，此处仍然只会随机选择一个使用
+            #解决方法：待泽鑫将资源组逻辑完成后再处理。
+            host_id = HostInfo.objects.using("cc")\
+                .filter(host=sHostIp).values("host_id")
+            if host_id:
+                host_id = host_id[0]["host_id"]
                 lHostId.append(host_id)
             else:
-                #已有主机IP的场景
-                #todo：此处有缺陷，若存在多个相同的host_ip，此处仍然只会随机选择一个使用
-                #解决方法：待泽鑫将资源组逻辑完成后再处理。
-                host_id = HostInfo.objects.using("cc")\
-                    .filter(host=dHost["host_ip"]).values("host_id")
-                if host_id:
-                    host_id = host_id[0]["host_id"]
-                    lHostId.append(host_id)
-                else:
-                    raise Exception("host %s can not find login method."%(dHost["host_ip"]))
+                raise Exception("host %s can not find login method."%(sHostIp))
 
         #插入HostTaskOperation
         for iHostId in lHostId:
@@ -586,6 +563,55 @@ def queryTaskResultFromApi(dPayload):
                 "return": lDataRet,
             })
         return (True,dRet)
+    except BaseException, e:
+        Log(gLogFile, 'ERROR', str(e))
+        dRet.update({
+            "status": "failed",
+            "return": str(e),
+        })
+    return (False, dRet)
+
+
+def addHostFromApi(dPayload):
+    try:
+        dRet = {
+            "status": "failed",
+            "return": "none",
+        }
+        lHost = dPayload["hosts"]
+
+        for dHost in lHost:
+            #新增主机的场景
+            #重复的主机-usr-su_usr会update
+            iCount = HostInfo.objects.using("cc").filter(host=dHost["host_ip"]
+                                    ,user=dHost["host_user"]
+                                    ,become_user=dHost["host_su_user"]).count()
+            if iCount:
+                host_id = HostInfo.objects.using("cc")\
+                    .filter(host=dHost["host_ip"]
+                            ,user=dHost["host_user"]
+                            ,become_user=dHost["host_su_user"])\
+                    .values("host_id")[0]["host_id"]
+
+                HostInfo.objects.using("cc").filter(host_id=host_id)\
+                    .update(port=dHost["host_port"]
+                            ,ssh_pass=dHost["host_passwd"]
+                            ,become_pass=dHost["host_su_passwd"]
+                            ,updated_at=GetTimeNowStr())
+            else:
+                Obj = HostInfo(host=dHost["host_ip"]
+                               ,user=dHost["host_user"]
+                               ,become_user=dHost["host_su_user"]
+                               ,port=dHost["host_port"]
+                               ,ssh_pass=dHost["host_passwd"]
+                               ,become_pass=dHost["host_su_passwd"]
+                               ,updated_at=GetTimeNowStr())
+                Obj.save(using="cc")
+        dRet.update({
+            "status": "succeeded",
+            "return": "add host succeeded.",
+        })
+        return (True, dRet)
     except BaseException, e:
         Log(gLogFile, 'ERROR', str(e))
         dRet.update({

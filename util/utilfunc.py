@@ -134,6 +134,12 @@ def myScp(sFileName):
     except BaseException, e:
         return (False, "deb 1 %s"%(str(e)))
     return (True, 'succ')
+
+def JudgeIpFormat(sIp):
+    rePattern = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+    if not rePattern.match(sIp):
+        return False
+    return True
     
     
     

@@ -17,4 +17,9 @@ urlpatterns = patterns('CenterControl.views',
     url(r'^get_task_result/(?P<ID>\d+)/','getTaskResult',name='get_task_result_url'),
     #上传文件
     url(r'^send_file/','sendFile',name='send_file_url'),
+
+    #api
+    url(r'^cc_api/','ccApi',name='cc_api_url'),
+
+
 )

@@ -260,6 +260,7 @@ def sendFile(request):
                 file_path=request.FILES['load_file'],
             )
             Obj.save(using='cc')
+            Log(gLogFile, "INFO", str(myScp(str(Obj.file_path)[3:])))
 
             sFileName = str(request.FILES['load_file'])
             sMd5sum = Obj.md5sum

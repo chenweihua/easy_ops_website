@@ -20,6 +20,7 @@ urlpatterns = patterns('CenterControl.views',
 
     #api
     url(r'^cc_api/','ccApi',name='cc_api_url'),
+    url(r'^cc_send_file_api/','sendFileFromApi',name='cc_send_file_api_url'),
 
 
 )

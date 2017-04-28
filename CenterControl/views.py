@@ -402,25 +402,19 @@ def ccApi(request):
 
             # 鉴权
             if judgeApiAuth(request) == False:
-                dRet.update({
-                    "status":"failed",
-                    "return":"authenticate failed.",
-                })
-            else:
-                (judgeRet, retInfo) = judgeApiFormat(dPayload)
-                if judgeRet == False:
-                    dRet.update({
-                        "status": "failed",
-                        "return": retInfo,
-                    })
-                else:
-                    if dPayload["type"] == "process":
-                        (sendRet, retInfo) =  sendTaskFromApi(dPayload)
-                    elif dPayload["type"] == "query":
-                        (sendRet, retInfo) = queryTaskResultFromApi(dPayload)
-                    elif dPayload["type"] == "add_host":
-                        (sendRet, retInfo) = addHostFromApi(dPayload)
-                    dRet = retInfo
+                raise Exception("authenticate failed.")
+
+            (judgeRet, retInfo) = judgeApiFormat(dPayload)
+            if judgeRet == False:
+                raise Exception(retInfo)
+
+            if dPayload["type"] == "process":
+                (sendRet, retInfo) =  sendTaskFromApi(dPayload)
+            elif dPayload["type"] == "query":
+                (sendRet, retInfo) = queryTaskResultFromApi(dPayload)
+            elif dPayload["type"] == "add_host":
+                (sendRet, retInfo) = addHostFromApi(dPayload)
+            dRet = retInfo
 
     except BaseException, e:
         Log(gLogFile, 'ERROR', str(e))
@@ -619,3 +613,102 @@ def addHostFromApi(dPayload):
             "return": str(e),
         })
     return (False, dRet)
+
+
+@csrf_exempt
+@access_logging
+def sendFileFromApi(request):
+    try:
+        dRet = {
+            "status": "failed",
+            "return": "none",
+        }
+
+        if request.method != "POST":
+            raise Exception("request method %s error."%(request.method))
+
+        # 鉴权也要重新搞。。
+        sSrcIp = request.META['REMOTE_ADDR']
+        sUsername = request.POST.get('username', 'none')
+        sPasswd = request.POST.get('passwd', 'none')
+        if sUsername == 'none':
+            iCnt = CcApiAuthorityInfo.objects.using("cc")\
+                .filter(src_ip=sSrcIp).count()
+        else:
+            iCnt = CcApiAuthorityInfo.objects.using("cc")\
+                .filter(api_username=sUsername,api_passwd=sPasswd).count()
+        if iCnt == 0:
+            raise Exception("authenticate failed.")
+
+        # 不能复用judgeApiFormat()，只能自己怼。
+        sType = request.POST.get("type","")
+        if sType != "push_file":
+            raise Exception("unknown request type %s."%(sType))
+
+        sDstPath = request.POST.get("dst_path","")
+        if sDstPath == "":
+            raise Exception("dst_path cannot be empty.")
+
+        lHosts = request.POST.getlist("host_ip")
+        for sHostIp in lHosts:
+            if JudgeIpFormat(sHostIp) == False:
+                raise Exception("ip %s format error." % (sHostIp))
+
+        # 文件处理
+        Obj = CcFileInfo(
+            file_name=str(request.FILES['load_file']),
+            file_path=request.FILES['load_file'],
+        )
+        Obj.save(using='cc')
+        Log(gLogFile, "INFO", str(myScp(str(Obj.file_path)[3:])))
+        sFileName = str(request.FILES['load_file'])
+        sMd5sum = Obj.md5sum
+
+        # 下发到中控平台
+        sTask = json.dumps({
+                "src": sFileName,
+                "dest": sDstPath,
+                "md5": sMd5sum,
+            })
+
+        Obj = HostTask(
+            name='test task',
+            timer_flag=0,
+            timer_on=1,
+            timer_crontab='',
+            starts_flag=1,
+            tab_date_time=GetTimeDayStr_(),
+        )
+        Obj.save(using='cc')
+        host_task_id = Obj.host_task_id
+
+        for sHost in lHosts:
+            host_id = HostInfo.objects.using('cc').filter(host=sHost) \
+                .values('host_id')
+            if not host_id:
+                raise Exception("host %s can not find login method."%(sHostIp))
+            host_id = host_id[0]['host_id']
+
+            Obj = HostTaskOperation(
+                host_task_id=host_task_id,
+                host_id=host_id,
+                type='scp',
+                arg=sTask,
+                tab_date_time=GetTimeDayStr_(),
+            )
+            Obj.save(using='cc')
+
+        HostTask.objects.using('cc').filter(host_task_id=host_task_id) \
+            .update(starts_flag=0)
+
+        dRet.update({
+            "status": "succeeded",
+            "return": str(host_task_id),
+        })
+    except BaseException,e:
+        Log(gLogFile,"ERROR",str(e))
+        dRet.update({
+            "status": "failed",
+            "return": str(e),
+        })
+    return HttpResponse(json.dumps(dRet), content_type='application/json')

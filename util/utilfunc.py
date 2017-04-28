@@ -82,8 +82,13 @@ def access_logging(Fn):
         if request.method == 'GET':
             sInfo = str(json.dumps(request.GET))
         elif request.method == 'POST':
-            sInfo = str(json.dumps(request.POST))
-        
+            #todo: 此处有问题。当推送文件时，不能获取到request.body。解决：将requests的参数放在post里。
+            try:
+                sInfo = str(json.dumps(request.body)) if len(request.POST) == 0 else str(json.dumps(request.POST))
+            except BaseException,e:
+                sInfo = str(e)
+            # sInfo = str(json.dumps(request.POST))
+
         Obj = UtilAccessInfo(tab_date_time = GetTimeDayStr_(),
             username = request.user.username,
             method = request.method,

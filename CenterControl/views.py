@@ -511,6 +511,14 @@ def queryTaskResultFromApi(dPayload):
         lHostIp = dPayload.get("host_ip",[])
         lHostId = []
 
+        #根据host_task表获取整个任务的执行状态
+        lData = HostTask.objects.using("cc").filter(host_task_id=sTaskId)\
+            .values("started_at","ended_at","result","stderr")
+        sResult = lData[0]["result"]
+        if sResult == "error":
+            raise Exception(lData[0]["stderr"])
+
+        #没有无法连通的主机
         qArg = Q()
         qArg.add(Q( **dict(host_task_id=sTaskId) ), Q.AND)
 

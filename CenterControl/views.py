@@ -327,9 +327,9 @@ def judgeApiAuth(request):
     try:
         sSrcIp = request.META['REMOTE_ADDR']
         dPayload = json.loads(request.body)
-        sUsername = dPayload.get('username', 'none')
-        sPasswd = dPayload.get('passwd', 'none')
-        if sUsername == 'none':
+        sUsername = dPayload.get('username', None)
+        sPasswd = dPayload.get('passwd', None)
+        if not sUsername:
             iCnt = CcApiAuthorityInfo.objects.using("cc")\
                 .filter(src_ip=sSrcIp).count()
         else:
@@ -343,9 +343,7 @@ def judgeApiAuth(request):
 
 
 def judgeApiFormat(dPayload):
-    #todo：IP合法性校验
     try:
-        #type:
         if "type" not in dPayload:
             raise Exception("type not in request.")
         if dPayload["type"] == "process":
@@ -456,18 +454,26 @@ def sendTaskFromApi(dPayload):
         #   在host_info表中对host_ip+user+become_user进行唯一性判断，若存在，
         #   则更新账号和密码。
         #
-        lHostId = []
-        for sHostIp in lHost:
-            #已有主机IP的场景
-            #todo：此处有缺陷，若存在多个相同的host_ip，此处仍然只会随机选择一个使用
-            #解决方法：待泽鑫将资源组逻辑完成后再处理。
-            host_id = HostInfo.objects.using("cc")\
-                .filter(host=sHostIp).values("host_id")
-            if host_id:
-                host_id = host_id[0]["host_id"]
-                lHostId.append(host_id)
-            else:
-                raise Exception("host %s can not find login method."%(sHostIp))
+        sUserName = dPayload.get('username', None)
+        (bRet,data) = utilHostOpt(sOpt="sel",
+                    iHostGroupId=__getUserOwnHostGroupId(sUserName),
+                    lHost=lHost,sUserName=sUserName)
+        if not bRet:
+            raise Exception(str(data))
+        lHostId = data
+
+        # lHostId = []
+        # for sHostIp in lHost:
+        #     #已有主机IP的场景
+        #     #todo：此处有缺陷，若存在多个相同的host_ip，此处仍然只会随机选择一个使用
+        #     #解决方法：待泽鑫将资源组逻辑完成后再处理。
+        #     host_id = HostInfo.objects.using("cc")\
+        #         .filter(host=sHostIp).values("host_id")
+        #     if host_id:
+        #         host_id = host_id[0]["host_id"]
+        #         lHostId.append(host_id)
+        #     else:
+        #         raise Exception("host %s can not find login method."%(sHostIp))
 
         #插入HostTaskOperation
         for iHostId in lHostId:
@@ -509,7 +515,7 @@ def queryTaskResultFromApi(dPayload):
         }
         sTaskId = dPayload["task_id"]
         lHostIp = dPayload.get("host_ip",[])
-        lHostId = []
+
 
         #根据host_task表获取整个任务的执行状态
         lData = HostTask.objects.using("cc").filter(host_task_id=sTaskId)\
@@ -522,13 +528,25 @@ def queryTaskResultFromApi(dPayload):
         qArg = Q()
         qArg.add(Q( **dict(host_task_id=sTaskId) ), Q.AND)
 
+
         if len(lHostIp):
-            # todo：缺陷同上
-            for sHostIp in lHostIp:
-                host_id = HostInfo.objects.using("cc") \
-                    .filter(host=sHostIp).values("host_id")[0]["host_id"]
-                lHostId.append(host_id)
-            qArg.add(Q( **dict(host_id__in=lHostId) ), Q.AND)
+            sUserName = dPayload.get('username', None)
+            (bRet, data) = utilHostOpt(sOpt="sel",
+                           iHostGroupId=__getUserOwnHostGroupId(sUserName),
+                           lHost=lHostIp,sUserName=sUserName)
+            if not bRet:
+                raise Exception(str(data))
+            lHostId = data
+            qArg.add(Q(**dict(host_id__in=lHostId)), Q.AND)
+
+        # lHostId = []
+        # if len(lHostIp):
+        #     # todo：缺陷同上
+        #     for sHostIp in lHostIp:
+        #         host_id = HostInfo.objects.using("cc") \
+        #             .filter(host=sHostIp).values("host_id")[0]["host_id"]
+        #         lHostId.append(host_id)
+        #     qArg.add(Q( **dict(host_id__in=lHostId) ), Q.AND)
 
         iCount = HostTaskOperation.objects.using("cc").filter(qArg)\
             .filter(result=None).count()
@@ -546,10 +564,11 @@ def queryTaskResultFromApi(dPayload):
 
             lDataRet = []
             for dKv in lData:
-                lTmp = HostInfo.objects.using('cc').filter(
-                    host_id=dKv['host_id']).values('host')
+                lTmp = HostInfo.objects.using('cc')\
+                    .filter( host_id=dKv['host_id']).values('host')
                 if not lTmp:
-                    Log(gLogFile,"ALARM","hostid:%s not in host_info table."%(dKv["host_id"]))
+                    Log(gLogFile,"ALARM","hostid:%s not in host_info table."\
+                        %(dKv["host_id"]))
                     continue
                 host = lTmp[0]['host']
                 lDataRet.append({
@@ -582,33 +601,39 @@ def addHostFromApi(dPayload):
         }
         lHost = dPayload["hosts"]
 
-        for dHost in lHost:
-            #新增主机的场景
-            #重复的主机-usr-su_usr会update
-            iCount = HostInfo.objects.using("cc").filter(host=dHost["host_ip"]
-                                    ,user=dHost["host_user"]
-                                    ,become_user=dHost["host_su_user"]).count()
-            if iCount:
-                host_id = HostInfo.objects.using("cc")\
-                    .filter(host=dHost["host_ip"]
-                            ,user=dHost["host_user"]
-                            ,become_user=dHost["host_su_user"])\
-                    .values("host_id")[0]["host_id"]
-
-                HostInfo.objects.using("cc").filter(host_id=host_id)\
-                    .update(port=dHost["host_port"]
-                            ,ssh_pass=dHost["host_passwd"]
-                            ,become_pass=dHost["host_su_passwd"]
-                            ,updated_at=GetTimeNowStr())
-            else:
-                Obj = HostInfo(host=dHost["host_ip"]
-                               ,user=dHost["host_user"]
-                               ,become_user=dHost["host_su_user"]
-                               ,port=dHost["host_port"]
-                               ,ssh_pass=dHost["host_passwd"]
-                               ,become_pass=dHost["host_su_passwd"]
-                               ,updated_at=GetTimeNowStr())
-                Obj.save(using="cc")
+        sUserName = dPayload.get('username', None)
+        (bRet, data) = utilHostOpt(sOpt="add",
+                       iHostGroupId=__getUserOwnHostGroupId(sUserName),
+                       lHost=lHost,sUserName=sUserName)
+        if not bRet:
+            raise Exception(str(data))
+        # for dHost in lHost:
+        #     #新增主机的场景
+        #     #重复的主机-usr-su_usr会update
+        #     iCount = HostInfo.objects.using("cc").filter(host=dHost["host_ip"]
+        #                             ,user=dHost["host_user"]
+        #                             ,become_user=dHost["host_su_user"]).count()
+        #     if iCount:
+        #         host_id = HostInfo.objects.using("cc")\
+        #             .filter(host=dHost["host_ip"]
+        #                     ,user=dHost["host_user"]
+        #                     ,become_user=dHost["host_su_user"])\
+        #             .values("host_id")[0]["host_id"]
+        #
+        #         HostInfo.objects.using("cc").filter(host_id=host_id)\
+        #             .update(port=dHost["host_port"]
+        #                     ,ssh_pass=dHost["host_passwd"]
+        #                     ,become_pass=dHost["host_su_passwd"]
+        #                     ,updated_at=GetTimeNowStr())
+        #     else:
+        #         Obj = HostInfo(host=dHost["host_ip"]
+        #                        ,user=dHost["host_user"]
+        #                        ,become_user=dHost["host_su_user"]
+        #                        ,port=dHost["host_port"]
+        #                        ,ssh_pass=dHost["host_passwd"]
+        #                        ,become_pass=dHost["host_su_passwd"]
+        #                        ,updated_at=GetTimeNowStr())
+        #         Obj.save(using="cc")
         dRet.update({
             "status": "succeeded",
             "return": "add host succeeded.",
@@ -690,13 +715,13 @@ def sendFileFromApi(request):
         Obj.save(using='cc')
         host_task_id = Obj.host_task_id
 
-        for sHost in lHosts:
-            host_id = HostInfo.objects.using('cc').filter(host=sHost) \
-                .values('host_id')
-            if not host_id:
-                raise Exception("host %s can not find login method."%(sHostIp))
-            host_id = host_id[0]['host_id']
-
+        (bRet, data) = utilHostOpt(sOpt="sel",
+                       iHostGroupId=__getUserOwnHostGroupId(sUsername),
+                       lHost=lHosts,sUserName=sUsername)
+        if not bRet:
+            raise Exception(str(data))
+        lHostId = data
+        for host_id in lHostId:
             Obj = HostTaskOperation(
                 host_task_id=host_task_id,
                 host_id=host_id,
@@ -705,6 +730,22 @@ def sendFileFromApi(request):
                 tab_date_time=GetTimeDayStr_(),
             )
             Obj.save(using='cc')
+
+        # for sHost in lHosts:
+        #     host_id = HostInfo.objects.using('cc').filter(host=sHost) \
+        #         .values('host_id')
+        #     if not host_id:
+        #         raise Exception("host %s can not find login method."%(sHostIp))
+        #     host_id = host_id[0]['host_id']
+        #
+        #     Obj = HostTaskOperation(
+        #         host_task_id=host_task_id,
+        #         host_id=host_id,
+        #         type='scp',
+        #         arg=sTask,
+        #         tab_date_time=GetTimeDayStr_(),
+        #     )
+        #     Obj.save(using='cc')
 
         HostTask.objects.using('cc').filter(host_task_id=host_task_id) \
             .update(starts_flag=0)
@@ -720,3 +761,187 @@ def sendFileFromApi(request):
             "return": str(e),
         })
     return HttpResponse(json.dumps(dRet), content_type='application/json')
+
+'''
+####################################
+权限模块公共函数
+####################################
+所有权限相关操作都抽出在这部分实现
+权限管理模块实施后的数据写入规则：
+a、同一主机组中的主机IP/name唯一，新增主机时，若主机IP相同，则更新其他字段；
+b、主机组中默认设置0号组，包含所有的主机信息该组用于执行自动化数据采集等任务。
+另外，在API调用中不存在的主机可从其中选择；
+
+'''
+def __getUserOwnHostGroupId(sUserName=None):
+    try:
+        user_id = CcApiAuthorityInfo.objects.using("cc")\
+                      .filter(api_username=sUserName).values("id")
+        if not user_id:
+            raise Exception("user not exist.")
+        user_id = user_id
+        host_group_info_id = UserAndHostGroupInfoMap.objects.using("cc")\
+            .filter(user_id=user_id,is_owner=1).values("host_group_info_id")
+        if not host_group_info_id:
+            raise Exception("hsot group id not exist.")
+        host_group_info_id = host_group_info_id[0]["host_group_info_id"]
+        return host_group_info_id
+    except BaseException,e:
+        Log(gLogFile,"ERROR",str(e))
+    return None
+
+
+
+def __judgePermission(iPermission,sOpt):
+    try:
+        if sOpt == "add":
+            iVal = int("0010",2)
+        elif sOpt == "del":
+            iVal = int("0100",2)
+        elif sOpt == "sel":
+            iVal = int("0001", 2)
+        elif sOpt == "mod":
+            iVal = int("1000", 2)
+        if iPermission & iVal == iVal:
+            return True
+    except BaseException,e:
+        Log(gLogFile,"ERROR",str(e))
+    return False
+
+def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
+    #主机信息的增、删、查、改  opt --> add|del|sel|mod
+    #user -> host group -> host
+    #
+    try:
+        if not sUserName:
+            raise Exception("user name is none.")
+        if not iHostGroupId:
+            raise Exception("host group id is none.")
+
+        #验证是否有权限
+        user_id = CcApiAuthorityInfo.objects.using("cc") \
+                      .filter(api_username=sUserName).values("id")
+        if not user_id:
+            raise Exception("user not exist.")
+
+        permission = UserAndHostGroupInfoMap.objects.using("cc") \
+            .filter(user_id=user_id, host_group_info_id=iHostGroupId) \
+            .values("permission")[0]["permission"]
+        if not __judgePermission(iPermission=permission, sOpt=sOpt):
+            raise Exception("user %s %s permission denied." % (sUserName, sOpt))
+
+        ret = None
+        if sOpt == "add":
+            #场景：api & 前端
+            if not lHost:
+                raise Exception("host list is none.")
+
+            #检验，host, host_user, host_su_user相同的，抛出异常
+            lHostId = HostInfoAndHostGroupInfoMap.objects.using("cc") \
+                .filter(host_group_info_id=iHostGroupId).values("host_id")
+            for dHostInfo in lHost:
+                iCnt = HostInfo.objects.using("cc")\
+                    .filter(host_id__in=lHostId,
+                            host=dHostInfo["host_ip"],
+                            user=dHostInfo["host_user"],
+                            become_user=dHostInfo["host_su_user"]).count()
+                if iCnt:
+                    #有相同的，update
+                    HostInfo.objects.using("cc")\
+                        .filter(host_id__in=lHostId,
+                                host=dHostInfo["host_ip"],
+                                user=dHostInfo["host_user"],
+                                become_user=dHostInfo["host_su_user"])\
+                        .update(ssh_pass=dHostInfo["host_passwd"],
+                                become_pass=dHostInfo["host_su_passwd"],
+                                port=dHostInfo["host_port"])
+                else:
+                    Obj = HostInfo(
+                        host=dHostInfo["host_ip"],
+                        user=dHostInfo["host_user"],
+                        become_user=dHostInfo["host_su_user"],
+                        port=dHostInfo["host_port"],
+                        ssh_pass=dHostInfo["host_passwd"],
+                        become_pass=dHostInfo["host_su_passwd"],
+                    )
+                    Obj.save(using="cc")
+                    host_id = Obj.host_id
+                    Obj = HostInfoAndHostGroupInfoMap(
+                        host_id=host_id,
+                        host_group_info_id=iHostGroupId,
+                    )
+                    Obj.save(using="cc")
+
+        elif sOpt == "del":
+            # 场景：api & 前端 暂时先不实现
+            if not lHost:
+                raise Exception("host list is none.")
+        elif sOpt == "sel":
+            # 场景：api & 前端
+            #这里的lhost结构与add的不同，只是ip的列表
+            ret = []
+            lHostId = HostInfoAndHostGroupInfoMap.objects.using("cc") \
+                .filter(host_group_info_id=iHostGroupId).values("host_id")
+
+            if lHost is None:
+                pass #预留
+            else:
+                for sHostIp in lHost:
+                    # 检索提供的IPlist是否在自己的组里
+                    host_id = HostInfo.objects.using("cc")\
+                        .filter(host_id__in=lHostId,host=sHostIp)\
+                        .values("host_id")
+                    if host_id:
+                        ret.append(host_id[0]["host_id"])
+                    else:
+                        # 若不在，使用默认分组的IP
+                        # iDeafultHostGroup = 0
+                        lHostIdDef = HostInfoAndHostGroupInfoMap.objects \
+                            .using("cc") \
+                            .filter(host_group_info_id=0).values("host_id")
+
+                        host_id = HostInfo.objects.using("cc")\
+                            .filter(host_id__in=lHostIdDef,
+                                    host=sHostIp).values("host_id")
+                        if host_id:
+                            ret.append(host_id[0]["host_id"])
+                        else:
+                            raise Exception("host %s cannot find login method."\
+                                            % (sHostIp))
+        elif sOpt == "mod":
+            # 场景：api & 前端 暂时先不实现
+            if not lHost:
+                raise Exception("host list is none.")
+        else:
+            raise Exception("host opt type error.")
+    except BaseException,e:
+        Log(gLogFile, 'ERROR', str(e))
+        return False, str(e)
+    return True, ret
+
+
+def utilGroupOpt(sOpt,sUserName=None,iHostGroupId=None):
+    # 主机组信息的增、删、查、改  opt --> add|del|sel|mod
+    #
+    #
+    try:
+        ret = None
+        if sOpt == "add":
+            # 场景：前端
+            pass
+        elif sOpt == "del":
+            # 场景：前端
+            pass
+        elif sOpt == "sel":
+            # 场景：前端
+            pass
+        elif sOpt == "mod":
+            # 场景：前端
+            pass
+        else:
+            raise Exception("host group opt type error.")
+    except BaseException,e:
+        Log(gLogFile, 'ERROR', str(e))
+        return False, str(e)
+    return True, ret
+

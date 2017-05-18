@@ -147,7 +147,7 @@ API模块实现
 ####################################
 '''
 class CcApiAuthorityInfo(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     insert_time = models.DateTimeField()
     src_ip = models.CharField(max_length=32)
     api_username = models.CharField(max_length=32)
@@ -156,3 +156,42 @@ class CcApiAuthorityInfo(models.Model):
         managed = False
         db_table = 'cc_api_authority_info'
 
+
+'''
+####################################
+权限模块
+####################################
+'''
+class HostGroupInfo(models.Model):
+    host_group_info_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=50)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    del_flag = models.IntegerField(default=0)
+    class Meta:
+        managed = False
+        db_table = 'host_group_info'
+
+class HostInfoAndHostGroupInfoMap(models.Model):
+    host_info_and_host_group_info_map_id = models.AutoField(primary_key=True)
+    host_id = models.IntegerField()
+    host_group_info_id = models.IntegerField()
+    del_flag = models.IntegerField(default=0)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    class Meta:
+        managed = False
+        db_table = 'host_info_and_host_group_info_map'
+
+class UserAndHostGroupInfoMap(models.Model):
+    user_and_host_group_info_map_id = models.AutoField(primary_key=True)
+    user_id = models.IntegerField()
+    host_group_info_id = models.IntegerField()
+    del_flag = models.IntegerField(default=0)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    is_owner = models.IntegerField(default=0)
+    permission = models.IntegerField(default=0)
+    class Meta:
+        managed = False
+        db_table = 'user_and_host_group_info_map'

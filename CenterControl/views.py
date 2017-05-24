@@ -80,7 +80,6 @@ def frameworkHealthGetTheData(request):
     #根据选择的日期查询健康度信息
     #
     #
-    #todo
     try:
         sSDate = request.POST.get('start_data','')
         sEDate = request.POST.get('end_data','')
@@ -346,7 +345,7 @@ def judgeApiFormat(dPayload):
     try:
         if "type" not in dPayload:
             raise Exception("type not in request.")
-        if dPayload["type"] == "process":
+        if dPayload["type"] == "process" or dPayload["type"] == "process_sync":
             if "cmds" not in dPayload:
                 raise Exception("cmd not in request.")
             if "host_ip" not in dPayload:
@@ -406,7 +405,7 @@ def ccApi(request):
             if judgeRet == False:
                 raise Exception(retInfo)
 
-            if dPayload["type"] == "process":
+            if dPayload["type"] == "process" or dPayload["type"] == "process_sync":
                 (sendRet, retInfo) =  sendTaskFromApi(dPayload)
             elif dPayload["type"] == "query":
                 (sendRet, retInfo) = queryTaskResultFromApi(dPayload)
@@ -465,7 +464,6 @@ def sendTaskFromApi(dPayload):
         # lHostId = []
         # for sHostIp in lHost:
         #     #已有主机IP的场景
-        #     #todo：此处有缺陷，若存在多个相同的host_ip，此处仍然只会随机选择一个使用
         #     #解决方法：待泽鑫将资源组逻辑完成后再处理。
         #     host_id = HostInfo.objects.using("cc")\
         #         .filter(host=sHostIp).values("host_id")
@@ -492,11 +490,24 @@ def sendTaskFromApi(dPayload):
         #最后更新下host_task表的完成字段
         HostTask.objects.using('cc').filter(host_task_id=host_task_id).update(starts_flag=0)
 
-        dRet.update({
-            "status": "succeeded",
-            "return": str(host_task_id),
-        })
-        return (True,dRet)
+        sType = dPayload["type"]
+        if sType == "process":
+            dRet.update({
+                "status": "succeeded",
+                "return": str(host_task_id),
+            })
+            return (True,dRet)
+        elif sType == "process_sync":
+            iProcTimes = 10
+            while iProcTimes != 0:
+                (bRet,dRetData) = __queryTaskResultFromId(str(host_task_id))
+                if dRetData["status"] in ("succeeded","failed"):
+                    dRet.update(dRetData)
+                    break
+                elif dRetData["status"] == "processing":
+                    iProcTimes -= 1
+                    time.sleep(1)
+            raise Exception("process timeout.")
     except BaseException, e:
         Log(gLogFile, 'ERROR', str(e))
         dRet.update({
@@ -541,7 +552,6 @@ def queryTaskResultFromApi(dPayload):
 
         # lHostId = []
         # if len(lHostIp):
-        #     # todo：缺陷同上
         #     for sHostIp in lHostIp:
         #         host_id = HostInfo.objects.using("cc") \
         #             .filter(host=sHostIp).values("host_id")[0]["host_id"]
@@ -586,6 +596,69 @@ def queryTaskResultFromApi(dPayload):
         return (True,dRet)
     except BaseException, e:
         Log(gLogFile, 'ERROR', str(e))
+        dRet.update({
+            "status": "failed",
+            "return": str(e),
+        })
+    return (False, dRet)
+
+def __queryTaskResultFromId(sTaskId):
+    try:
+        dRet = {
+            "status": "failed",
+            "return": "none",
+        }
+
+        # 根据host_task表获取整个任务的执行状态
+        lData = HostTask.objects.using("cc").filter(host_task_id=sTaskId) \
+            .values("started_at", "ended_at", "result", "stderr")
+        sResult = lData[0]["result"]
+        if sResult == "error":
+            raise Exception(lData[0]["stderr"])
+
+        # 没有无法连通的主机
+        qArg = Q()
+        qArg.add(Q(**dict(host_task_id=sTaskId)), Q.AND)
+
+        iCount = HostTaskOperation.objects.using("cc").filter(qArg) \
+            .filter(result=None).count()
+        if iCount != 0:
+            # processing
+            dRet.update({
+                "status": "processing",
+                "return": "processing task count:%s." % (iCount),
+            })
+        else:
+            # all process done
+            lData = HostTaskOperation.objects.using("cc").filter(qArg) \
+                .values('host_id', 'arg', 'started_at', 'ended_at'
+                        , 'result', 'stdout')
+
+            lDataRet = []
+            for dKv in lData:
+                lTmp = HostInfo.objects.using('cc') \
+                    .filter(host_id=dKv['host_id']).values('host')
+                if not lTmp:
+                    Log(gLogFile, "ALARM", "hostid:%s not in host_info table." \
+                        % (dKv["host_id"]))
+                    continue
+                host = lTmp[0]['host']
+                lDataRet.append({
+                    'host': host,
+                    'arg': dKv['arg'],
+                    'started_at': dKv['started_at'].strftime(
+                        "%Y-%m-%d %H:%M:%S"),
+                    'ended_at': dKv['ended_at'].strftime("%Y-%m-%d %H:%M:%S"),
+                    'result': dKv['result'],
+                    'stdout': dKv['stdout'],
+                })
+            dRet.update({
+                "status": "succeeded",
+                "return": lDataRet,
+            })
+        return (True, dRet)
+    except BaseException,e:
+        Log(gLogFile,"ERROR",str(e))
         dRet.update({
             "status": "failed",
             "return": str(e),
@@ -675,7 +748,7 @@ def sendFileFromApi(request):
 
         # 不能复用judgeApiFormat()，只能自己怼。
         sType = request.POST.get("type","")
-        if sType != "push_file":
+        if sType != "push_file" and sType != "push_file_sync":
             raise Exception("unknown request type %s."%(sType))
 
         sDstPath = request.POST.get("dst_path","")
@@ -750,10 +823,22 @@ def sendFileFromApi(request):
         HostTask.objects.using('cc').filter(host_task_id=host_task_id) \
             .update(starts_flag=0)
 
-        dRet.update({
-            "status": "succeeded",
-            "return": str(host_task_id),
-        })
+        if sType == "push_file":
+            dRet.update({
+                "status": "succeeded",
+                "return": str(host_task_id),
+            })
+        elif sType == "push_file_sync":
+            iProcTimes = 10
+            while iProcTimes != 0:
+                (bRet, dRetData) = __queryTaskResultFromId(str(host_task_id))
+                if dRetData["status"] in ("succeeded", "failed"):
+                    dRet.update(dRetData)
+                    break
+                elif dRetData["status"] == "processing":
+                    iProcTimes -= 1
+                    time.sleep(1)
+            raise Exception("process timeout.")
     except BaseException,e:
         Log(gLogFile,"ERROR",str(e))
         dRet.update({
@@ -889,7 +974,7 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                 for sHostIp in lHost:
                     # 检索提供的IPlist是否在自己的组里
                     host_id = HostInfo.objects.using("cc")\
-                        .filter(host_id__in=lHostId,host=sHostIp)\
+                        .filter(host_id__in=lHostId,host=sHostIp,del_flag=0)\
                         .values("host_id")
                     if host_id:
                         ret.append(host_id[0]["host_id"])
@@ -902,7 +987,7 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
 
                         host_id = HostInfo.objects.using("cc")\
                             .filter(host_id__in=lHostIdDef,
-                                    host=sHostIp).values("host_id")
+                                    host=sHostIp,del_flag=0).values("host_id")
                         if host_id:
                             ret.append(host_id[0]["host_id"])
                         else:

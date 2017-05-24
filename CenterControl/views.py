@@ -498,7 +498,7 @@ def sendTaskFromApi(dPayload):
             })
             return (True,dRet)
         elif sType == "process_sync":
-            iProcTimes = 10
+            iProcTimes = 120
             while iProcTimes != 0:
                 (bRet,dRetData) = __queryTaskResultFromId(str(host_task_id))
                 if dRetData["status"] in ("succeeded","failed"):
@@ -507,7 +507,8 @@ def sendTaskFromApi(dPayload):
                 elif dRetData["status"] == "processing":
                     iProcTimes -= 1
                     time.sleep(1)
-            raise Exception("process timeout.")
+            if iProcTimes == 0:
+                raise Exception("process timeout.")
     except BaseException, e:
         Log(gLogFile, 'ERROR', str(e))
         dRet.update({
@@ -829,7 +830,7 @@ def sendFileFromApi(request):
                 "return": str(host_task_id),
             })
         elif sType == "push_file_sync":
-            iProcTimes = 10
+            iProcTimes = 120
             while iProcTimes != 0:
                 (bRet, dRetData) = __queryTaskResultFromId(str(host_task_id))
                 if dRetData["status"] in ("succeeded", "failed"):
@@ -980,10 +981,10 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         ret.append(host_id[0]["host_id"])
                     else:
                         # 若不在，使用默认分组的IP
-                        # iDeafultHostGroup = 0
+                        # iDeafultHostGroup = 1
                         lHostIdDef = HostInfoAndHostGroupInfoMap.objects \
                             .using("cc") \
-                            .filter(host_group_info_id=0).values("host_id")
+                            .filter(host_group_info_id=1).values("host_id")
 
                         host_id = HostInfo.objects.using("cc")\
                             .filter(host_id__in=lHostIdDef,

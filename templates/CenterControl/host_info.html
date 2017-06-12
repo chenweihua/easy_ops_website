@@ -1,0 +1,98 @@
+{% extends "CenterControl/center_control_common.html" %}
+
+{% block title %}
+	Host Info
+{% endblock %}
+
+{% block subcontent %}
+<div class="jumbotron">
+  <h3 id="id_h3_main_text"></h3>
+</div>
+<div id="id_text_info">
+
+</div>
+<div id="id_table">
+<form class="form-inline" role="form">
+   <div class="form-group">
+      <input type="text" class="form-control" id="name" placeholder="请输入IP" oninput="queryFunction(this.value)">
+   </div>
+</form>
+</br>
+<div id="id_div_query_table"></div>
+</div>
+
+<script>
+    $(function () {
+       preProc();
+       getStatInfo();
+       queryFunction("get_all");
+
+    });
+    
+    function preProc() {
+
+    };
+
+    function mySpan (sStr) {
+        return '<span style="color:red">' + sStr + '</span>';
+    }
+
+    function getStatInfo() {
+        $.ajax({
+            type: "POST",
+            url: "{% url 'get_host_stat_info_url' %}",
+            dataType: "json",
+            data: {
+                csrfmiddlewaretoken: "{{ csrf_token }}"
+            },
+            success: function(data){
+
+                var myDate = new Date();
+
+                //截止xxx，系统共接入主机xxx台，其中可管理xxx台，不可管理xxx台（网络不可达xxx台，端口未开放xxx台，密码错误xxx台，其他原因xxx台）。
+				var sDate = myDate.getFullYear()+ '年' + (myDate.getMonth() + 1) + '月' + myDate.getDate() + '日';
+				$("#id_h3_main_text").html("截止" + mySpan(sDate) + "，系统共接入主机" + mySpan(data["all_host_cnt"]) + "台，其中可管理" + mySpan(data["conn_host_cnt"]) + "台，不可管理"+ mySpan(data["unconn_host_cnt"]) +"台（网络不可达"+ mySpan(data["timed_out_host_cnt"]) +"台，端口未开放"+ mySpan(data["refused_host_cnt"]) +"台，密码错误"+ mySpan(data["denied_host_cnt"]) +"台，其他原因"+ mySpan(data["other_host_cnt"]) +"台）。");
+            },
+        });
+    };
+
+    function queryFunction(sIp){
+		console.log(sIp);
+		$.ajax({
+			type:"POST",
+			url:'{% url "get_host_info_url" %}',
+			dataType:"json",
+			data:{
+				csrfmiddlewaretoken: '{{ csrf_token }}',
+				query_ip:sIp,
+			},
+			//async:false,
+			success:function(data){
+				var aIp = data['ldata'];
+				console.log(aIp);
+
+				$("#id_div_query_table").children().remove();
+				var MyTaskGrid = new bbGrid.View({
+					container: $('#id_div_query_table'),
+					enableSearch: true,
+					collection:  new Backbone.Collection(aIp),
+					rows:40,
+					rowList: [40,80,120],
+					colModel: [
+						{ title: '插入时间', name: 'created_at',index: true,sorttype: 'string' },
+						{ title: '更新时间', name: 'updated_at',index: true,sorttype: 'string' },
+						{ title: 'IP', name: 'host',index: true,sorttype: 'string' },
+						{ title: '用户', name: 'user',index: true,sorttype: 'string' },
+						{ title: 'su用户', name: 'become_user',index: true,sorttype: 'string' },
+						{ title: '管理IP', name: 'probe_ip',index: true,sorttype: 'string' },
+						{ title: '删除', name: 'del_flag',index: true,sorttype: 'number' },
+						{ title: '探测', name: 'detect_flag',index: true,sorttype: 'number' },
+						{ title: '连通', name: 'connect_flag',index: true,sorttype: 'number' },
+						{ title: '探测状态', name: 'status',index: true,sorttype: 'string' },
+					],
+				});
+			}
+		});
+	}
+</script>
+{% endblock %}

@@ -839,7 +839,8 @@ def sendFileFromApi(request):
                 elif dRetData["status"] == "processing":
                     iProcTimes -= 1
                     time.sleep(1)
-            raise Exception("process timeout.")
+            if iProcTimes == 0:
+                raise Exception("process timeout.")
     except BaseException,e:
         Log(gLogFile,"ERROR",str(e))
         dRet.update({
@@ -968,7 +969,7 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
             ret = []
             lHostId = HostInfoAndHostGroupInfoMap.objects.using("cc") \
                 .filter(host_group_info_id=iHostGroupId).values("host_id")
-
+            lNoConHosts = []
             if lHost is None:
                 pass #预留
             else:
@@ -992,8 +993,12 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         if host_id:
                             ret.append(host_id[0]["host_id"])
                         else:
-                            raise Exception("host %s cannot find login method."\
-                                            % (sHostIp))
+                            lNoConHosts.append(sHostIp)
+                            # raise Exception("host %s cannot find login method."\
+                            #                 % (sHostIp))
+            if len(lNoConHosts) != 0:
+                raise Exception("unreachable_hosts:%s"%(','.join(lNoConHosts)))
+
         elif sOpt == "mod":
             # 场景：api & 前端 暂时先不实现
             if not lHost:
@@ -1031,3 +1036,110 @@ def utilGroupOpt(sOpt,sUserName=None,iHostGroupId=None):
         return False, str(e)
     return True, ret
 
+
+def hostInfo(request):
+    kwvars = {
+        'request': request,
+    }
+    return render_to_response('CenterControl/host_info.html' \
+                              , kwvars, RequestContext(request))
+
+def getHostStatInfo(request):
+    try:
+        Log(gLogFile, "DEBUG", "bef")
+        dRet = dict(
+            all_host_cnt = 0,
+            conn_host_cnt = 0,
+            unconn_host_cnt = 0,
+            timed_out_host_cnt = 0,
+            refused_host_cnt = 0,
+            denied_host_cnt = 0,
+            other_host_cnt = 0,
+        )
+        #总数目
+        iAllHostCnt = HostInfo.objects.using("cc").values("host").distinct().count()
+        dRet["all_host_cnt"] = iAllHostCnt
+        #可管理数目
+        iConnHostCnt = HostInfo.objects.using("cc")\
+            .filter(detect_flag=1,connect_flag=1).values("host").distinct().count()
+        dRet["conn_host_cnt"] = iConnHostCnt
+        #不可管理数目
+        iUnConnHostCnt = HostInfo.objects.using("cc") \
+            .filter(detect_flag=1,connect_flag=0).values("host").distinct().count()
+        dRet["unconn_host_cnt"] = iUnConnHostCnt
+        #网络不通
+        iTimedOutHostCnt = HostInfo.objects.using("cc")\
+            .filter(detect_flag=1,connect_flag=0,status__contains="timed out")\
+            .values("host").distinct().count()
+        dRet["timed_out_host_cnt"] = iTimedOutHostCnt
+        #端口未开放
+        iRefusedHostCnt = HostInfo.objects.using("cc") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="denied") \
+                    .values("host").distinct().count()
+        dRet["refused_host_cnt"] = iRefusedHostCnt
+        #密码错误
+        iDeniedHostCnt = HostInfo.objects.using("cc") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="refused") \
+                    .values("host").distinct().count()
+        dRet["denied_host_cnt"] = iDeniedHostCnt
+        #其他原因
+        iOtherHostCnt = iUnConnHostCnt - iTimedOutHostCnt - iRefusedHostCnt - iDeniedHostCnt
+        dRet["other_host_cnt"] = iOtherHostCnt
+        Log(gLogFile,"DEBUG",str(dRet))
+    except BaseException,e:
+        Log(gLogFile,"ERROR",str(e))
+    return HttpResponse(json.dumps(dRet),content_type = 'application/json')
+
+
+def getHostInfo(request):
+    try:
+        kwvars = {}
+        sIp = request.POST["query_ip"]
+        if sIp == "get_all":
+            lData = HostInfo.objects.using("cc").values(
+                "created_at",
+                "updated_at",
+                "host",
+                "user",
+                "become_user",
+                "probe_ip",
+                "del_flag",
+                "detect_flag",
+                "connect_flag",
+                "status",
+            )[:50]
+
+        else:
+            lData = HostInfo.objects.using("cc").filter(
+                host__startswith=sIp).values(
+                "created_at",
+                "updated_at",
+                "host",
+                "user",
+                "become_user",
+                "probe_ip",
+                "del_flag",
+                "detect_flag",
+                "connect_flag",
+                "status",
+            )[:50]
+
+        lDataTmp = []
+        for dKv in lData:
+            dTmp = {}
+            for Key in dKv:
+                if Key in ('created_at',"updated_at"):
+                    if dKv[Key] is None:
+                        dTmp[Key] = "0000-00-00 00:00:00"
+                    else:
+                        dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    dTmp[Key] = dKv[Key]
+            lDataTmp.append(dTmp)
+        kwvars.update({
+            'ldata': lDataTmp,
+        })
+    except BaseException, e:
+        Log(gLogFile, "ERROR", str(e))
+
+    return HttpResponse(json.dumps(kwvars),content_type = 'application/json')

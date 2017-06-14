@@ -52,6 +52,7 @@ class HostInfo(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     status = models.TextField(blank=True)
+    cache_flag = models.IntegerField(default=1)
     class Meta:
         managed = False
         db_table = 'host_info'

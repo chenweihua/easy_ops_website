@@ -348,13 +348,29 @@ def judgeApiFormat(dPayload):
         if dPayload["type"] == "process" or dPayload["type"] == "process_sync":
             if "cmds" not in dPayload:
                 raise Exception("cmd not in request.")
-            if "host_ip" not in dPayload:
-                raise Exception("host_ip not in request.")
-            if not isinstance(dPayload["host_ip"],list):
-                raise Exception("host_ip must be list.")
-            for sIp in dPayload["host_ip"]:
-                if JudgeIpFormat(sIp) == False:
-                    raise Exception("ip %s format error."%(sIp))
+            if "host_ip" not in dPayload and "host_info" not in dPayload:
+                raise Exception("host_ip or host_info not in request.")
+            if "host_ip" in dPayload:
+                if not isinstance(dPayload["host_ip"],list):
+                    raise Exception("host_ip must be list.")
+                for sIp in dPayload["host_ip"]:
+                    if JudgeIpFormat(sIp) == False:
+                        raise Exception("ip %s format error."%(sIp))
+            if "host_info" in dPayload:
+                if not isinstance(dPayload["host_info"],list):
+                    raise Exception("host_info must be list.")
+                for dHost in dPayload["host_info"]:
+                    if "host_ip" not in dHost:
+                        raise Exception("host_ip not in request.")
+                    if JudgeIpFormat(dHost["host_ip"]) == False:
+                        raise Exception(
+                            "ip %s format error." % (dHost["host_ip"]))
+                    for dKey in dHost:
+                        if dKey not in ("host_ip"
+                                        , "host_user", "host_passwd"
+                                        , "host_su_user", "host_su_passwd"):
+                            raise Exception("%s not in request." % (dKey))
+
         elif dPayload["type"] == "query":
             if "task_id" not in dPayload:
                 raise Exception("task_id not in request.")
@@ -432,7 +448,8 @@ def sendTaskFromApi(dPayload):
             "return": "none",
         }
 
-        lHost = dPayload["host_ip"]
+        # lHost = dPayload["host_ip"]
+        lHost = dPayload.get("host_ip",dPayload.get("host_info",[]))
         lTask = dPayload["cmds"]
 
         # 写入任务表，获取到host_task_id
@@ -454,9 +471,15 @@ def sendTaskFromApi(dPayload):
         #   则更新账号和密码。
         #
         sUserName = dPayload.get('username', None)
-        (bRet,data) = utilHostOpt(sOpt="sel",
-                    iHostGroupId=__getUserOwnHostGroupId(sUserName),
-                    lHost=lHost,sUserName=sUserName)
+        if "host_info" in dPayload:
+            (bRet,data) = utilHostOpt(sOpt="add",
+                        iHostGroupId=__getUserOwnHostGroupId(sUserName),
+                        lHost=lHost,sUserName=sUserName)
+        elif "host_ip" in dPayload:
+            (bRet, data) = utilHostOpt(sOpt="sel",
+                        iHostGroupId=__getUserOwnHostGroupId(sUserName),
+                        lHost=lHost, sUserName=sUserName)
+
         if not bRet:
             raise Exception(str(data))
         lHostId = data
@@ -756,10 +779,28 @@ def sendFileFromApi(request):
         if sDstPath == "":
             raise Exception("dst_path cannot be empty.")
 
-        lHosts = request.POST.getlist("host_ip")
-        for sHostIp in lHosts:
-            if JudgeIpFormat(sHostIp) == False:
-                raise Exception("ip %s format error." % (sHostIp))
+        if "host_ip" in request.POST:
+            lHosts = request.POST.getlist("host_ip")
+            for sHostIp in lHosts:
+                if JudgeIpFormat(sHostIp) == False:
+                    raise Exception("ip %s format error." % (sHostIp))
+        elif "host_info" in request.POST: #支持实时传入主机信息（包括用户名、密码等）
+            sHosts = request.POST.get("host_info","[]")
+            try:
+                Log(gLogFile,"DEBUG",sHosts)
+                lHosts = json.loads(sHosts)
+            except BaseException,e:
+                raise Exception("host_info format error.")
+
+            for dHost in lHosts:
+                if "host_ip" not in dHost:
+                    raise Exception("host_ip not in request.")
+                if JudgeIpFormat(dHost["host_ip"]) == False:
+                    raise Exception("ip %s format error." % (dHost["host_ip"]))
+                for dKey in dHost:
+                    if dKey not in ("host_ip", "host_user", "host_passwd",
+                                    "host_su_user", "host_su_passwd"):
+                        raise Exception("%s not in request." % (dKey))
 
         # 文件处理
         Obj = CcFileInfo(
@@ -789,9 +830,14 @@ def sendFileFromApi(request):
         Obj.save(using='cc')
         host_task_id = Obj.host_task_id
 
-        (bRet, data) = utilHostOpt(sOpt="sel",
-                       iHostGroupId=__getUserOwnHostGroupId(sUsername),
-                       lHost=lHosts,sUserName=sUsername)
+        if "host_info" in request.POST:
+            (bRet, data) = utilHostOpt(sOpt="add",
+                           iHostGroupId=__getUserOwnHostGroupId(sUsername),
+                           lHost=lHosts, sUserName=sUsername)
+        elif "host_ip" in request.POST:
+            (bRet, data) = utilHostOpt(sOpt="sel",
+                           iHostGroupId=__getUserOwnHostGroupId(sUsername),
+                           lHost=lHosts,sUserName=sUsername)
         if not bRet:
             raise Exception(str(data))
         lHostId = data
@@ -922,17 +968,21 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
             #场景：api & 前端
             if not lHost:
                 raise Exception("host list is none.")
+            ret = []
 
             #检验，host, host_user, host_su_user相同的，抛出异常
             lHostId = HostInfoAndHostGroupInfoMap.objects.using("cc") \
                 .filter(host_group_info_id=iHostGroupId).values("host_id")
             for dHostInfo in lHost:
-                iCnt = HostInfo.objects.using("cc")\
+                if "host_port" not in dHostInfo: #中间件场景下，用户不需要输入端口
+                    dHostInfo["host_port"] = 22
+
+                host_id = HostInfo.objects.using("cc")\
                     .filter(host_id__in=lHostId,
                             host=dHostInfo["host_ip"],
                             user=dHostInfo["host_user"],
-                            become_user=dHostInfo["host_su_user"]).count()
-                if iCnt:
+                            become_user=dHostInfo["host_su_user"]).values("host_id")
+                if host_id:
                     #有相同的，update
                     HostInfo.objects.using("cc")\
                         .filter(host_id__in=lHostId,
@@ -941,7 +991,9 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                                 become_user=dHostInfo["host_su_user"])\
                         .update(ssh_pass=dHostInfo["host_passwd"],
                                 become_pass=dHostInfo["host_su_passwd"],
-                                port=dHostInfo["host_port"])
+                                port=dHostInfo["host_port"],
+                                cache_flag=0) #下发主机缓存
+                    ret.append(host_id[0]["host_id"])
                 else:
                     Obj = HostInfo(
                         host=dHostInfo["host_ip"],
@@ -950,6 +1002,7 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         port=dHostInfo["host_port"],
                         ssh_pass=dHostInfo["host_passwd"],
                         become_pass=dHostInfo["host_su_passwd"],
+                        cache_flag=0,
                     )
                     Obj.save(using="cc")
                     host_id = Obj.host_id
@@ -958,6 +1011,7 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         host_group_info_id=iHostGroupId,
                     )
                     Obj.save(using="cc")
+                    ret.append(host_id)
 
         elif sOpt == "del":
             # 场景：api & 前端 暂时先不实现
@@ -1074,12 +1128,12 @@ def getHostStatInfo(request):
         dRet["timed_out_host_cnt"] = iTimedOutHostCnt
         #端口未开放
         iRefusedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="denied") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="refused") \
                     .values("host").distinct().count()
         dRet["refused_host_cnt"] = iRefusedHostCnt
         #密码错误
         iDeniedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="refused") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="denied") \
                     .values("host").distinct().count()
         dRet["denied_host_cnt"] = iDeniedHostCnt
         #其他原因

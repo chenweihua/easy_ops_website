@@ -48,10 +48,10 @@
             success: function(data){
 
                 var myDate = new Date();
-
+                var iCoverRate = (data["conn_host_cnt"] / (data["all_host_cnt"] -  data["refused_host_cnt"] - data["denied_host_cnt"])).toFixed(2)
                 //截止xxx，系统共接入主机xxx台，其中可管理xxx台，不可管理xxx台（网络不可达xxx台，端口未开放xxx台，密码错误xxx台，其他原因xxx台）。
 				var sDate = myDate.getFullYear()+ '年' + (myDate.getMonth() + 1) + '月' + myDate.getDate() + '日';
-				$("#id_h3_main_text").html("截止" + mySpan(sDate) + "，系统共接入主机" + mySpan(data["all_host_cnt"]) + "台，其中可管理" + mySpan(data["conn_host_cnt"]) + "台，不可管理"+ mySpan(data["unconn_host_cnt"]) +"台（网络不可达"+ mySpan(data["timed_out_host_cnt"]) +"台，端口未开放"+ mySpan(data["refused_host_cnt"]) +"台，密码错误"+ mySpan(data["denied_host_cnt"]) +"台，其他原因"+ mySpan(data["other_host_cnt"]) +"台）。");
+				$("#id_h3_main_text").html("截止" + mySpan(sDate) + "，系统共接入主机" + mySpan(data["all_host_cnt"]) + "台，其中可管理" + mySpan(data["conn_host_cnt"]) + "台，不可管理"+ mySpan(data["unconn_host_cnt"]) +"台（网络不可达"+ mySpan(data["timed_out_host_cnt"]) +"台，端口未开放"+ mySpan(data["refused_host_cnt"]) +"台，密码错误"+ mySpan(data["denied_host_cnt"]) +"台，其他原因"+ mySpan(data["other_host_cnt"]) +"台）。剔除端口未开放、密码错误主机，覆盖率：" + mySpan(iCoverRate) + "%。");
             },
         });
     };

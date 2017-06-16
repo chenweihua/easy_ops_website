@@ -77,6 +77,7 @@ class HostTask(models.Model):
     stderr = models.TextField(blank=True)
     del_flag = models.IntegerField(default=0, editable=False)
     tab_date_time = models.DateTimeField()
+    super_host_task_id = models.IntegerField(default=0)
     class Meta:
         managed = False
         db_table = 'host_task'

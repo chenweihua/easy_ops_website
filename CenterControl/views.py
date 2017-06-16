@@ -995,6 +995,21 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                                 cache_flag=0) #下发主机缓存
                     ret.append(host_id[0]["host_id"])
                 else:
+                    # 检索下host_info中（不区分群组）是否存在该IP，
+                    # 若存在，则detect_flag、connect_flag复用
+                    probe_ip = HostInfo.objects.using("cc").filter(
+                        host=dHostInfo["host_ip"],
+                        detect_flag=1, connect_flag=1,
+                    ).values("probe_ip")[:1]
+                    if probe_ip:
+                        probe_ip = probe_ip[0]["probe_ip"]
+                        detect_flag = 1
+                        connect_flag = 1
+                    else:
+                        probe_ip = "0.0.0.0"
+                        detect_flag = 0
+                        connect_flag = 0
+
                     Obj = HostInfo(
                         host=dHostInfo["host_ip"],
                         user=dHostInfo["host_user"],
@@ -1003,6 +1018,9 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         ssh_pass=dHostInfo["host_passwd"],
                         become_pass=dHostInfo["host_su_passwd"],
                         cache_flag=0,
+                        detect_flag=detect_flag,
+                        connect_flag=connect_flag,
+                        probe_ip=probe_ip
                     )
                     Obj.save(using="cc")
                     host_id = Obj.host_id

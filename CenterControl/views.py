@@ -656,7 +656,7 @@ def __queryTaskResultFromId(sTaskId):
             # all process done
             lData = HostTaskOperation.objects.using("cc").filter(qArg) \
                 .values('host_id', 'arg', 'started_at', 'ended_at'
-                        , 'result', 'stdout')
+                        , 'result', 'stdout', 'stderr')
 
             lDataRet = []
             for dKv in lData:
@@ -675,6 +675,7 @@ def __queryTaskResultFromId(sTaskId):
                     'ended_at': dKv['ended_at'].strftime("%Y-%m-%d %H:%M:%S"),
                     'result': dKv['result'],
                     'stdout': dKv['stdout'],
+                    'stderr': dKv['stderr'],
                 })
             dRet.update({
                 "status": "succeeded",

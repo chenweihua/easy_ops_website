@@ -993,7 +993,8 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                         .update(ssh_pass=dHostInfo["host_passwd"],
                                 become_pass=dHostInfo["host_su_passwd"],
                                 port=dHostInfo["host_port"],
-                                cache_flag=0) #下发主机缓存
+                                cache_flag=0,
+                                updateed_at=GetTimeNowStr()) #下发主机缓存
                     ret.append(host_id[0]["host_id"])
                 else:
                     # 检索下host_info中（不区分群组）是否存在该IP，

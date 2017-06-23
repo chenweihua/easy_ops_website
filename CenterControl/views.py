@@ -62,8 +62,19 @@ def frameworkHealthGetData(request):
         for dKv in lData:
             if '%s_%s'%(dKv['dev_ip'],dKv['dev_type']) in dKeyTmp:
                 continue
+            #获取到host_task_heartbeat中的任务数目
+            lData = HostTaskHeartbeatInfo.objects.using("cc") \
+                .filter(dev_ip=dKv['dev_ip'], dev_type=dKv['dev_type'], heartbeat_type="common") \
+                .order_by('-insert_time').values("pre_start_cnt")[:1]
+            if lData:
+                iPreCnt = lData[0]["pre_start_cnt"]
+            else:
+                iPreCnt = 0
+
             dKeyTmp['%s_%s'%(dKv['dev_ip'],dKv['dev_type'])] = 1
-            dTmp = {}
+            dTmp = {
+                "pre_start_cnt": iPreCnt,
+            }
             for Key in dKv:
                 if Key in ('insert_time','tab_date_time'):
                     dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
@@ -119,10 +130,38 @@ def frameworkHealthGetTheData(request):
                     dTmp[Key] = dKv[Key]
             lDataTmp.append(dTmp)
 
+        #host 模块健康度数据
+        lData = HostTaskHeartbeatInfo.objects.using("cc")\
+            .filter(
+                heartbeat_time__range=(
+                    datetime.date(int(sY1), int(sM1), int(sD1)),
+                    datetime.date(int(sY2), int(sM2), int(sD2)))
+            ).filter(dev_ip=dev_ip,dev_type=dev_type,heartbeat_type="common") \
+            .order_by('insert_time') \
+            .values(
+            "heartbeat_time",
+            "pre_start_cnt",
+        )
+        lDataTmp1 = []
+        for dKv in lData:
+            dTmp = {}
+            for Key in dKv:
+                if Key in ('insert_time', 'tab_date_time'):
+                    dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    dTmp[Key] = dKv[Key]
+            lDataTmp1.append(dTmp)
+
+        dRetTmp = {
+            "framework_data": lDataTmp,
+            "host_module_data": lDataTmp1,
+        }
+
+
     except BaseException,e:
         Log(gLogFile,'ERROR',str(e))
 
-    return HttpResponse(json.dumps(lDataTmp),content_type = 'application/json')
+    return HttpResponse(json.dumps(dRetTmp),content_type = 'application/json')
 
 
 @login_required

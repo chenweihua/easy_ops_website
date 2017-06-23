@@ -27,6 +27,25 @@ class CcFrameworkHeartbeatInfo(models.Model):
         managed = False
         db_table = 'cc_framework_heartbeat_info'
 
+class HostTaskHeartbeatInfo(models.Model):
+    host_task_heartbeat_info_id = models.IntegerField(primary_key=True)
+    dev_ip = models.CharField(max_length=16)
+    dev_type = models.CharField(max_length=16, blank=True)
+    heartbeat_type = models.CharField(max_length=6, blank=True)
+    heartbeat_time = models.DateTimeField()
+    received_cnt = models.IntegerField()
+    received_data = models.TextField(blank=True)
+    pre_start_cnt = models.IntegerField()
+    pre_start_data = models.TextField(blank=True)
+    started_cnt = models.IntegerField()
+    started_data = models.TextField(blank=True)
+    finished_cnt = models.IntegerField()
+    finished_data = models.TextField(blank=True)
+    tab_date_time = models.DateTimeField()
+    class Meta:
+        managed = False
+        db_table = 'host_task_heartbeat_info'
+
 '''
 ####################################
 主机管理任务下发

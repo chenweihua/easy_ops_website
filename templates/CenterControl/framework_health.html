@@ -19,13 +19,15 @@
 		</div>
 	</div>
 	<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
+	<div id="id_div_mainPie1" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
 </div>
 
 
 
 
 <script>
-	var oData = {};
+	var oFrameworkData = {};
+	var oHostModuleData = {};
 	var aTable = [];
 	var sDevIp = '';
 	var sDevType = '';
@@ -102,36 +104,56 @@
 	}
 
 	function procData(data) {
-	    oData = {};
-        for (var i in data){
-            dev_ip = data[i]['dev_ip'];
-            dev_type = data[i]['dev_type'];
+	    framework_data = data["framework_data"];
+	    host_module_data = data["host_module_data"];
+	    oFrameworkData = {};
+        for (var i in framework_data){
+            dev_ip = framework_data[i]['dev_ip'];
+            dev_type = framework_data[i]['dev_type'];
             sKey = dev_ip + '_' + dev_type;
-            if (oData[sKey]){
-                oData[sKey]['insert_time'].push(data[i]['insert_time']);
-                oData[sKey]['recv_cnt'].push(data[i]['recv_cnt']);
-                oData[sKey]['send_cnt'].push(data[i]['send_cnt']);
-                oData[sKey]['log_mq'].push(data[i]['log_mq']);
-                oData[sKey]['netio_recv_mq'].push(data[i]['netio_recv_mq']);
-                oData[sKey]['netio_send_mq'].push(data[i]['netio_send_mq']);
-                oData[sKey]['api_recv_mq'].push(data[i]['api_recv_mq']);
-                oData[sKey]['data_proc_recv_mq'].push(data[i]['data_proc_recv_mq']);
-                oData[sKey]['put_conn_mq_fail_cnt'].push(data[i]['put_conn_mq_fail_cnt']);
+            if (oFrameworkData[sKey]){
+                oFrameworkData[sKey]['insert_time'].push(framework_data[i]['insert_time']);
+                oFrameworkData[sKey]['recv_cnt'].push(framework_data[i]['recv_cnt']);
+                oFrameworkData[sKey]['send_cnt'].push(framework_data[i]['send_cnt']);
+                oFrameworkData[sKey]['log_mq'].push(framework_data[i]['log_mq']);
+                oFrameworkData[sKey]['netio_recv_mq'].push(framework_data[i]['netio_recv_mq']);
+                oFrameworkData[sKey]['netio_send_mq'].push(framework_data[i]['netio_send_mq']);
+                oFrameworkData[sKey]['api_recv_mq'].push(framework_data[i]['api_recv_mq']);
+                oFrameworkData[sKey]['data_proc_recv_mq'].push(framework_data[i]['data_proc_recv_mq']);
+                oFrameworkData[sKey]['put_conn_mq_fail_cnt'].push(framework_data[i]['put_conn_mq_fail_cnt']);
             }
             else{
-                oData[sKey] = {
-                    'insert_time' : [data[i]['insert_time']],
-                    'recv_cnt' : [data[i]['recv_cnt']],
-                    'send_cnt' : [data[i]['send_cnt']],
-                    'log_mq' : [data[i]['log_mq']],
-                    'netio_recv_mq' : [data[i]['netio_recv_mq']],
-                    'netio_send_mq' : [data[i]['netio_send_mq']],
-                    'api_recv_mq' : [data[i]['api_recv_mq']],
-                    'data_proc_recv_mq' : [data[i]['data_proc_recv_mq']],
-                    'put_conn_mq_fail_cnt' : [data[i]['put_conn_mq_fail_cnt']],
+                oFrameworkData[sKey] = {
+                    'insert_time' : [framework_data[i]['insert_time']],
+                    'recv_cnt' : [framework_data[i]['recv_cnt']],
+                    'send_cnt' : [framework_data[i]['send_cnt']],
+                    'log_mq' : [framework_data[i]['log_mq']],
+                    'netio_recv_mq' : [framework_data[i]['netio_recv_mq']],
+                    'netio_send_mq' : [framework_data[i]['netio_send_mq']],
+                    'api_recv_mq' : [framework_data[i]['api_recv_mq']],
+                    'data_proc_recv_mq' : [framework_data[i]['data_proc_recv_mq']],
+                    'put_conn_mq_fail_cnt' : [framework_data[i]['put_conn_mq_fail_cnt']],
                 };
             }
         }
+
+	    oHostModuleData = {};
+        for (var i in host_module_data){
+            dev_ip = host_module_data[i]['dev_ip'];
+            dev_type = host_module_data[i]['dev_type'];
+            sKey = dev_ip + '_' + dev_type;
+            if (oHostModuleData[sKey]){
+                oHostModuleData[sKey]['insert_time'].push(host_module_data[i]['heartbeat_time']);
+                oHostModuleData[sKey]['pre_start_cnt'].push(host_module_data[i]['pre_start_cnt']);
+            }
+            else{
+                oHostModuleData[sKey] = {
+                    'insert_time' : [host_module_data[i]['heartbeat_time']],
+                    'pre_start_cnt' : [host_module_data[i]['pre_start_cnt']],
+                };
+            }
+        }
+
     }
 
 	function getTable(){
@@ -154,6 +176,7 @@
 				{ title: 'API收队列', name: 'api_recv_mq',index: true,sorttype: 'string' },
 				{ title: '数据处理收队列', name: 'data_proc_recv_mq',index: true,sorttype: 'string' },
 				{ title: 'conn发队列写入失败', name: 'put_conn_mq_fail_cnt',index: true,sorttype: 'string' },
+				{ title: '任务队列', name: 'pre_start_cnt',index: true,sorttype: 'string' },
 			],
 			buttons:[
 				{
@@ -189,16 +212,31 @@
 		};
 	}
 
-	function createGraph() {
-        var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
-		var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq','put_conn_mq_fail_cnt'];
-		var aTime = oData[sKey]['insert_time'];
-		var aSeries = [];
-		for (var i = 0; i < aTag.length; i++){
-			aSeries.push(getSeries(aTag[i],oData[sKey][aFlag[i]]));
-		}
+	function createGraph(sFlag) {
+	    if (sFlag == "framework_data"){
+	        var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
+            var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq','put_conn_mq_fail_cnt'];
+            var aTime = oFrameworkData[sKey]['insert_time'];
+            var aSeries = [];
+            for (var i = 0; i < aTag.length; i++){
+                aSeries.push(getSeries(aTag[i],oFrameworkData[sKey][aFlag[i]]));
+            }
 
-		var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+            var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+        }
+        else if(sFlag == "host_module_data"){
+            var aTag = ['任务队列'];
+            var aFlag = ['pre_start_cnt'];
+            var aTime = oHostModuleData[sKey]['insert_time'];
+            var aSeries = [];
+            for (var i = 0; i < aTag.length; i++){
+                aSeries.push(getSeries(aTag[i],oHostModuleData[sKey][aFlag[i]]));
+            }
+
+            var MyChart = echarts.init(document.getElementById('id_div_mainPie1'));
+        }
+
+
 		options = {
 			title : {
                     text: sDevIp,
@@ -303,7 +341,8 @@
             }
         });
 
-        createGraph();
+        createGraph("framework_data");
+        createGraph("host_module_data");
     }
 </script>
 {% endblock %}

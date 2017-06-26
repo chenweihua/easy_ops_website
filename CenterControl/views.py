@@ -142,7 +142,7 @@ def frameworkHealthGetTheData(request):
                 tab_date_time__range=(
                     datetime.date(int(sY1), int(sM1), int(sD1)),
                     datetime.date(int(sY2), int(sM2),int(sD2)) \
-                    + datetime.timedelta(1)
+                    # + datetime.timedelta(1)
                 )
             ) \
             .filter(dev_ip=dev_ip,dev_type=dev_type,heartbeat_type="common") \

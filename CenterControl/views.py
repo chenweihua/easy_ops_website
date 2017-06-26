@@ -53,7 +53,7 @@ def frameworkHealthGetData(request):
                 'api_recv_mq',
                 'data_proc_recv_mq',
                 'put_conn_mq_fail_cnt'
-                )
+                )[:100]
 
         #取出最新的一条数据
         dKeyTmp = {}
@@ -65,7 +65,7 @@ def frameworkHealthGetData(request):
             #获取到host_task_heartbeat中的任务数目
             lData = HostTaskHeartbeatInfo.objects.using("cc") \
                 .filter(dev_ip=dKv['dev_ip'], dev_type=dKv['dev_type'], heartbeat_type="common") \
-                .order_by('-insert_time').values("pre_start_cnt")[:1]
+                .order_by('-heartbeat_time').values("pre_start_cnt")[:1]
             if lData:
                 iPreCnt = lData[0]["pre_start_cnt"]
             else:
@@ -131,22 +131,33 @@ def frameworkHealthGetTheData(request):
             lDataTmp.append(dTmp)
 
         #host 模块健康度数据
-        lData = HostTaskHeartbeatInfo.objects.using("cc")\
+        # .filter(
+        #     tab_date_time__range=(
+        #         datetime.date(int(sY1), int(sM1), int(sD1)),
+        #         datetime.date(int(sY2), int(sM2),
+        #                       int(sD2)) + datetime.timedelta(1))
+        # ) \
+            lData = HostTaskHeartbeatInfo.objects.using("cc") \
             .filter(
-                heartbeat_time__range=(
+                tab_date_time__range=(
                     datetime.date(int(sY1), int(sM1), int(sD1)),
-                    datetime.date(int(sY2), int(sM2), int(sD2)))
-            ).filter(dev_ip=dev_ip,dev_type=dev_type,heartbeat_type="common") \
-            .order_by('insert_time') \
+                    datetime.date(int(sY2), int(sM2),int(sD2)) \
+                    + datetime.timedelta(1)
+                )
+            ) \
+            .filter(dev_ip=dev_ip,dev_type=dev_type,heartbeat_type="common") \
+            .order_by('heartbeat_time') \
             .values(
+            'dev_ip',
+            'dev_type',
             "heartbeat_time",
             "pre_start_cnt",
-        )
+            )
         lDataTmp1 = []
         for dKv in lData:
             dTmp = {}
             for Key in dKv:
-                if Key in ('insert_time', 'tab_date_time'):
+                if Key in ('heartbeat_time'):
                     dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     dTmp[Key] = dKv[Key]

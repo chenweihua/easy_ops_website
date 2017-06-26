@@ -212,7 +212,7 @@
 		};
 	}
 
-	function createGraph(sFlag) {
+	function createGraph(sKey,sFlag) {
 	    if (sFlag == "framework_data"){
 	        var aTag = ['收包数/分','发包数/分','日志队列','网络IO收队列','网络IO发队列','API收队列','数据处理收队列','conn发队列写入失败'];
             var aFlag = ['recv_cnt','send_cnt','log_mq','netio_recv_mq','netio_send_mq','api_recv_mq','data_proc_recv_mq','put_conn_mq_fail_cnt'];
@@ -223,6 +223,8 @@
             }
 
             var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+            window.onresize = MyChart.resize;
+
         }
         else if(sFlag == "host_module_data"){
             var aTag = ['任务队列'];
@@ -234,8 +236,10 @@
             }
 
             var MyChart = echarts.init(document.getElementById('id_div_mainPie1'));
+            window.addEventListener('resize',MyChart.resize,false);
         }
-
+		//重新变更图大小
+//		window.onresize = MyChart.resize;
 
 		options = {
 			title : {
@@ -283,9 +287,6 @@
             series : aSeries,
 		};
 		MyChart.setOption(options);
-
-		//重新变更图大小
-		window.onresize = MyChart.resize;
 
 //		$("#id_div_mainPie").css('visibility','visible');
 		$("#id_all_graph").css('visibility','visible');
@@ -340,9 +341,9 @@
                 procData(data);
             }
         });
-
-        createGraph("framework_data");
-        createGraph("host_module_data");
+        var sKey = sDevIp + '_' + sDevType;
+        createGraph(sKey,"framework_data");
+        createGraph(sKey,"host_module_data");
     }
 </script>
 {% endblock %}

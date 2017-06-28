@@ -1181,29 +1181,29 @@ def getHostStatInfo(request):
             other_host_cnt = 0,
         )
         #总数目
-        iAllHostCnt = HostInfo.objects.using("cc").values("host").distinct().count()
+        iAllHostCnt = HostInfo.objects.using("cc").filter(del_flag=0).values("host").distinct().count()
         dRet["all_host_cnt"] = iAllHostCnt
         #可管理数目
         iConnHostCnt = HostInfo.objects.using("cc")\
-            .filter(detect_flag=1,connect_flag=1).values("host").distinct().count()
+            .filter(detect_flag=1,connect_flag=1,del_flag=0).values("host").distinct().count()
         dRet["conn_host_cnt"] = iConnHostCnt
         #不可管理数目
         iUnConnHostCnt = HostInfo.objects.using("cc") \
-            .filter(detect_flag=1,connect_flag=0).values("host").distinct().count()
+            .filter(detect_flag=1,connect_flag=0,del_flag=0).values("host").distinct().count()
         dRet["unconn_host_cnt"] = iUnConnHostCnt
         #网络不通
         iTimedOutHostCnt = HostInfo.objects.using("cc")\
-            .filter(detect_flag=1,connect_flag=0,status__contains="timed out")\
+            .filter(detect_flag=1,connect_flag=0,status__contains="timed out",del_flag=0)\
             .values("host").distinct().count()
         dRet["timed_out_host_cnt"] = iTimedOutHostCnt
         #端口未开放
         iRefusedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="refused") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="refused",del_flag=0) \
                     .values("host").distinct().count()
         dRet["refused_host_cnt"] = iRefusedHostCnt
         #密码错误
         iDeniedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="denied") \
+                .filter(detect_flag=1, connect_flag=0,status__contains="denied",del_flag=0) \
                     .values("host").distinct().count()
         dRet["denied_host_cnt"] = iDeniedHostCnt
         #其他原因

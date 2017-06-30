@@ -1201,13 +1201,19 @@ def getHostStatInfo(request):
                 .filter(detect_flag=1, connect_flag=0,status__contains="refused",del_flag=0) \
                     .values("host").distinct().count()
         dRet["refused_host_cnt"] = iRefusedHostCnt
+        #远端关闭连接
+        iClosedByRemoteHostCnt = HostInfo.objects.using("cc") \
+            .filter(detect_flag=1, connect_flag=0, status__contains="closed by remote",
+                    del_flag=0) \
+            .values("host").distinct().count()
+        dRet["closed_by_remote_host_cnt"] = iClosedByRemoteHostCnt
         #密码错误
         iDeniedHostCnt = HostInfo.objects.using("cc") \
                 .filter(detect_flag=1, connect_flag=0,status__contains="denied",del_flag=0) \
                     .values("host").distinct().count()
         dRet["denied_host_cnt"] = iDeniedHostCnt
         #其他原因
-        iOtherHostCnt = iUnConnHostCnt - iTimedOutHostCnt - iRefusedHostCnt - iDeniedHostCnt
+        iOtherHostCnt = iUnConnHostCnt - iTimedOutHostCnt - iRefusedHostCnt - iDeniedHostCnt - iClosedByRemoteHostCnt
         dRet["other_host_cnt"] = iOtherHostCnt
         Log(gLogFile,"DEBUG",str(dRet))
     except BaseException,e:

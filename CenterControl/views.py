@@ -1170,7 +1170,7 @@ def hostInfo(request):
 
 def getHostStatInfo(request):
     try:
-        Log(gLogFile, "DEBUG", "bef")
+        '''
         dRet = dict(
             all_host_cnt = 0,
             conn_host_cnt = 0,
@@ -1215,10 +1215,37 @@ def getHostStatInfo(request):
         #其他原因
         iOtherHostCnt = iUnConnHostCnt - iTimedOutHostCnt - iRefusedHostCnt - iDeniedHostCnt - iClosedByRemoteHostCnt
         dRet["other_host_cnt"] = iOtherHostCnt
-        Log(gLogFile,"DEBUG",str(dRet))
-    except BaseException,e:
+        '''
+
+        lData = HostCoverageStat.objects.using("cc").values(
+            "insert_time",
+            "all_host_cnt",
+            "conn_host_cnt",
+            "unconn_host_cnt",
+            "timeout_host_cnt",
+            "refused_host_cnt",
+            "denied_host_cnt",
+            "closed_by_remote_host_cnt",
+            "other_host_cnt",
+        ).order_by("insert_time")[:30]
+
+        lDataTmp = []
+        for dKv in lData:
+            dTmp = {}
+            for Key in dKv:
+                if Key in ("insert_time"):
+                    if dKv[Key] is None:
+                        dTmp[Key] = "0000-00-00 00:00:00"
+                    else:
+                        dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    dTmp[Key] = dKv[Key]
+            lDataTmp.append(dTmp)
+
+    except BaseException as e:
         Log(gLogFile,"ERROR",str(e))
-    return HttpResponse(json.dumps(dRet),content_type = 'application/json')
+    # return HttpResponse(json.dumps(dRet),content_type = 'application/json')
+    return HttpResponse(json.dumps(lDataTmp),content_type = 'application/json')
 
 
 def getHostInfo(request):

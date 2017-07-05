@@ -119,6 +119,19 @@ class HostTaskOperation(models.Model):
         managed = False
         db_table = 'host_task_operation'
 
+class HostCoverageStat(models.Model):
+    insert_time = models.DateTimeField()
+    all_host_cnt = models.IntegerField()
+    conn_host_cnt = models.IntegerField()
+    unconn_host_cnt = models.IntegerField()
+    timeout_host_cnt = models.IntegerField()
+    refused_host_cnt = models.IntegerField()
+    denied_host_cnt = models.IntegerField()
+    closed_by_remote_host_cnt = models.IntegerField()
+    other_host_cnt = models.IntegerField()
+    class Meta:
+        managed = False
+        db_table = 'host_coverage_stat'
 
 '''
 ####################################

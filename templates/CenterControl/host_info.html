@@ -8,9 +8,9 @@
 <div class="jumbotron">
   <h3 id="id_h3_main_text"></h3>
 </div>
-<div id="id_text_info">
-
-</div>
+<div id="id_text_info"></div>
+<div id="id_div_mainPie" style="height:500px;border:1px solid #ccc;padding:10px;"></div>
+</br>
 <div id="id_table">
 <form class="form-inline" role="form">
    <div class="form-group">
@@ -37,6 +37,91 @@
         return '<span style="color:red">' + sStr + '</span>';
     }
 
+    function getSeries(sName,aData){
+		return {
+			name:sName,
+			type:'line',
+			data:aData,
+			markPoint : {
+				data : [
+					{type : 'max', name: '最大值',symbol: 'none'},
+					{type : 'min', name: '最小值',symbol: 'none'},
+				],
+			},
+			itemStyle : {
+				normal : {
+					lineStyle : {
+						//color:'#c23531',
+						width : 1,
+					},
+				},
+			},
+			symbol: 'none',
+		};
+	}
+
+	function createGraph(oData) {
+        var aTag = ['总主机数','可管理数','不可管理数','远端关闭连接数','端口未开放数','密码错误数','其他原因数'];
+        var aFlag = ['all_host_cnt','conn_host_cnt','unconn_host_cnt','closed_by_remote_host_cnt','refused_host_cnt','denied_host_cnt','other_host_cnt'];
+        var aTime = oData['insert_time'];
+        var aSeries = [];
+        for (var i = 0; i < aTag.length; i++){
+            aSeries.push(getSeries(aTag[i],oData[aFlag[i]]));
+        }
+
+        var MyChart = echarts.init(document.getElementById('id_div_mainPie'));
+        window.onresize = MyChart.resize;
+
+		options = {
+			title : {
+                    text: "覆盖趋势图",
+                    subtext: "",
+                    textStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+                    subtextStyle:{
+                    fontFamily: '微软雅黑'
+                    },
+			},
+			tooltip : {
+                trigger: 'axis'
+            },
+            legend: {
+                data:aTag,
+            },
+            toolbox: {
+                show : true,
+                feature : {
+                    mark : {show: true},
+                    dataView : {show: true, readOnly: false},
+                    magicType : {show: true, type: ['line', 'bar']},
+                    restore : {show: true},
+                    saveAsImage : {show: true}
+                }
+            },
+            calculable : true,
+            xAxis : [
+                {
+                    type : 'category',
+                    boundaryGap : false,
+                    data : aTime,
+                }
+            ],
+            yAxis : [
+                {
+                    type : 'value',
+                    axisLabel : {
+                        formatter: '{value} ',
+                    }
+                }
+            ],
+            series : aSeries,
+		};
+		MyChart.setOption(options);
+
+		$("#id_div_mainPie").css('visibility','visible');
+    }
+
     function getStatInfo() {
         $.ajax({
             type: "POST",
@@ -45,19 +130,34 @@
             data: {
                 csrfmiddlewaretoken: "{{ csrf_token }}"
             },
-            success: function(data){
-
+            success: function(ldata){
+                var data = ldata[ldata.length - 1];
                 var myDate = new Date();
                 var iCoverRate = (100 * data["conn_host_cnt"] / (data["all_host_cnt"] -  data["refused_host_cnt"] - data["denied_host_cnt"] - data["closed_by_remote_host_cnt"])).toFixed(2)
                 //截止xxx，系统共接入主机xxx台，其中可管理xxx台，不可管理xxx台（网络不可达xxx台，端口未开放xxx台，密码错误xxx台，其他原因xxx台）。
 				var sDate = myDate.getFullYear()+ '年' + (myDate.getMonth() + 1) + '月' + myDate.getDate() + '日';
-				$("#id_h3_main_text").html("截止" + mySpan(sDate) + "，系统共接入主机" + mySpan(data["all_host_cnt"]) + "台，其中可管理" + mySpan(data["conn_host_cnt"]) + "台，不可管理"+ mySpan(data["unconn_host_cnt"]) +"台（网络不可达"+ mySpan(data["timed_out_host_cnt"]) + "台，远端关闭连接" + mySpan(data["closed_by_remote_host_cnt"]) +"台，端口未开放"+ mySpan(data["refused_host_cnt"]) +"台，密码错误"+ mySpan(data["denied_host_cnt"]) +"台，其他原因"+ mySpan(data["other_host_cnt"]) +"台）。剔除端口未开放、密码错误、远端关闭连接主机，覆盖率：" + mySpan(iCoverRate) + "%。");
+				$("#id_h3_main_text").html("截止" + mySpan(sDate) + "，系统共接入主机" + mySpan(data["all_host_cnt"]) + "台，其中可管理" + mySpan(data["conn_host_cnt"]) + "台，不可管理"+ mySpan(data["unconn_host_cnt"]) +"台（网络不可达"+ mySpan(data["timeout_host_cnt"]) + "台，远端关闭连接" + mySpan(data["closed_by_remote_host_cnt"]) +"台，端口未开放"+ mySpan(data["refused_host_cnt"]) +"台，密码错误"+ mySpan(data["denied_host_cnt"]) +"台，其他原因"+ mySpan(data["other_host_cnt"]) +"台）。剔除端口未开放、密码错误、远端关闭连接主机，覆盖率：" + mySpan(iCoverRate) + "%。");
+
+				//绘图
+                oData = {};
+                for (var i in ldata){
+                    for(var k in ldata[i]){
+                        if (oData[k]){
+                            oData[k].push(ldata[i][k]);
+                        }
+                        else {
+                            oData[k] = [ldata[i][k]];
+                        }
+                    }
+                }
+
+                createGraph(oData);
+
             },
         });
     };
 
     function queryFunction(sIp){
-		console.log(sIp);
 		$.ajax({
 			type:"POST",
 			url:'{% url "get_host_info_url" %}',
@@ -69,7 +169,6 @@
 			//async:false,
 			success:function(data){
 				var aIp = data['ldata'];
-				console.log(aIp);
 
 				$("#id_div_query_table").children().remove();
 				var MyTaskGrid = new bbGrid.View({

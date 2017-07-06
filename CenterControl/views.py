@@ -4,7 +4,7 @@ from django.db.models import Max
 
 # Create your views here.
 
-
+from util.module_crypto import *
 from util.utilfunc import *
 from util.utilvar import *
 from util.utilmodels import *
@@ -1020,31 +1020,50 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
             if not lHost:
                 raise Exception("host list is none.")
             ret = []
-
             #检验，host, host_user, host_su_user相同的，抛出异常
             lHostId = HostInfoAndHostGroupInfoMap.objects.using("cc") \
                 .filter(host_group_info_id=iHostGroupId).values("host_id")
             for dHostInfo in lHost:
+                # 获取加密后的host信息
+                (sEncryptoUser,sEncryptoPasswd) = encrypt(
+                    dHostInfo["host_ip"],
+                    dHostInfo["host_user"],
+                    dHostInfo["host_passwd"]
+                )
+                (sEncryptoSuUser, sEncryptoSuPasswd) = encrypt(
+                    dHostInfo["host_ip"],
+                    dHostInfo["host_su_user"],
+                    dHostInfo["host_su_passwd"]
+                )
+
                 if "host_port" not in dHostInfo: #中间件场景下，用户不需要输入端口
                     dHostInfo["host_port"] = 22
 
                 host_id = HostInfo.objects.using("cc")\
                     .filter(host_id__in=lHostId,
                             host=dHostInfo["host_ip"],
-                            user=dHostInfo["host_user"],
-                            become_user=dHostInfo["host_su_user"]).values("host_id")
+                            # user=dHostInfo["host_user"],
+                            # become_user=dHostInfo["host_su_user"]
+                            user=sEncryptoUser,
+                            become_user=sEncryptoSuUser
+                            ).values("host_id")
                 if host_id:
                     #有相同的，update
                     HostInfo.objects.using("cc")\
                         .filter(host_id__in=lHostId,
                                 host=dHostInfo["host_ip"],
-                                user=dHostInfo["host_user"],
-                                become_user=dHostInfo["host_su_user"])\
-                        .update(ssh_pass=dHostInfo["host_passwd"],
-                                become_pass=dHostInfo["host_su_passwd"],
+                                # user=dHostInfo["host_user"],
+                                # become_user=dHostInfo["host_su_user"])\
+                                user=sEncryptoUser,
+                                become_user=sEncryptoSuUser)\
+                        .update(
+                                # ssh_pass=dHostInfo["host_passwd"],
+                                # become_pass=dHostInfo["host_su_passwd"],
+                                ssh_pass=sEncryptoPasswd,
+                                become_pass=sEncryptoSuPasswd,
                                 port=dHostInfo["host_port"],
                                 cache_flag=0,
-                                updateed_at=GetTimeNowStr()) #下发主机缓存
+                                updated_at=GetTimeNowStr()) #下发主机缓存
                     ret.append(host_id[0]["host_id"])
                 else:
                     # 检索下host_info中（不区分群组）是否存在该IP，
@@ -1064,11 +1083,15 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
 
                     Obj = HostInfo(
                         host=dHostInfo["host_ip"],
-                        user=dHostInfo["host_user"],
-                        become_user=dHostInfo["host_su_user"],
                         port=dHostInfo["host_port"],
-                        ssh_pass=dHostInfo["host_passwd"],
-                        become_pass=dHostInfo["host_su_passwd"],
+                        # user=dHostInfo["host_user"],
+                        # become_user=dHostInfo["host_su_user"],
+                        # ssh_pass=dHostInfo["host_passwd"],
+                        # become_pass=dHostInfo["host_su_passwd"],
+                        user=sEncryptoUser,
+                        become_user=sEncryptoSuUser,
+                        ssh_pass=sEncryptoPasswd,
+                        become_pass=sEncryptoSuPasswd,
                         cache_flag=0,
                         detect_flag=detect_flag,
                         connect_flag=connect_flag,
@@ -1170,53 +1193,6 @@ def hostInfo(request):
 
 def getHostStatInfo(request):
     try:
-        '''
-        dRet = dict(
-            all_host_cnt = 0,
-            conn_host_cnt = 0,
-            unconn_host_cnt = 0,
-            timed_out_host_cnt = 0,
-            refused_host_cnt = 0,
-            denied_host_cnt = 0,
-            other_host_cnt = 0,
-        )
-        #总数目
-        iAllHostCnt = HostInfo.objects.using("cc").filter(del_flag=0).values("host").distinct().count()
-        dRet["all_host_cnt"] = iAllHostCnt
-        #可管理数目
-        iConnHostCnt = HostInfo.objects.using("cc")\
-            .filter(detect_flag=1,connect_flag=1,del_flag=0).values("host").distinct().count()
-        dRet["conn_host_cnt"] = iConnHostCnt
-        #不可管理数目
-        iUnConnHostCnt = HostInfo.objects.using("cc") \
-            .filter(detect_flag=1,connect_flag=0,del_flag=0).values("host").distinct().count()
-        dRet["unconn_host_cnt"] = iUnConnHostCnt
-        #网络不通
-        iTimedOutHostCnt = HostInfo.objects.using("cc")\
-            .filter(detect_flag=1,connect_flag=0,status__contains="timed out",del_flag=0)\
-            .values("host").distinct().count()
-        dRet["timed_out_host_cnt"] = iTimedOutHostCnt
-        #端口未开放
-        iRefusedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="refused",del_flag=0) \
-                    .values("host").distinct().count()
-        dRet["refused_host_cnt"] = iRefusedHostCnt
-        #远端关闭连接
-        iClosedByRemoteHostCnt = HostInfo.objects.using("cc") \
-            .filter(detect_flag=1, connect_flag=0, status__contains="closed by remote",
-                    del_flag=0) \
-            .values("host").distinct().count()
-        dRet["closed_by_remote_host_cnt"] = iClosedByRemoteHostCnt
-        #密码错误
-        iDeniedHostCnt = HostInfo.objects.using("cc") \
-                .filter(detect_flag=1, connect_flag=0,status__contains="denied",del_flag=0) \
-                    .values("host").distinct().count()
-        dRet["denied_host_cnt"] = iDeniedHostCnt
-        #其他原因
-        iOtherHostCnt = iUnConnHostCnt - iTimedOutHostCnt - iRefusedHostCnt - iDeniedHostCnt - iClosedByRemoteHostCnt
-        dRet["other_host_cnt"] = iOtherHostCnt
-        '''
-
         lData = HostCoverageStat.objects.using("cc").values(
             "insert_time",
             "all_host_cnt",
@@ -1264,6 +1240,8 @@ def getHostInfo(request):
                 "detect_flag",
                 "connect_flag",
                 "status",
+                "ssh_pass",
+                "become_pass",
             )[:50]
 
         else:
@@ -1279,6 +1257,8 @@ def getHostInfo(request):
                 "detect_flag",
                 "connect_flag",
                 "status",
+                "ssh_pass",
+                "become_pass",
             )[:50]
 
         lDataTmp = []
@@ -1292,6 +1272,13 @@ def getHostInfo(request):
                         dTmp[Key] = dKv[Key].strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     dTmp[Key] = dKv[Key]
+            if len(dTmp["user"]) == 32 and len(dTmp["ssh_pass"]) == 32 \
+                    and len(dTmp["become_user"]) == 32 and len(dTmp["become_pass"]) == 32:
+                (dTmp["user"],sDecryptPasswd) \
+                    = decrypt(dTmp["host"],dTmp["user"],dTmp["ssh_pass"])
+                (dTmp["become_user"],sDecryptSuPasswd) \
+                    = decrypt(dTmp["host"],dTmp["become_user"],dTmp["become_pass"])
+
             lDataTmp.append(dTmp)
         kwvars.update({
             'ldata': lDataTmp,

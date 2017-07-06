@@ -1064,6 +1064,18 @@ def utilHostOpt(sOpt,sUserName=None,iHostGroupId=None,lHost=None):
                                 port=dHostInfo["host_port"],
                                 cache_flag=0,
                                 updated_at=GetTimeNowStr()) #下发主机缓存
+
+                    #对于原来密码就错误的场景，更新完之后将detect_flag置为0
+                    HostInfo.objects.using("cc") \
+                        .filter(host_id__in=lHostId,
+                                host=dHostInfo["host_ip"],
+                                # user=dHostInfo["host_user"],
+                                # become_user=dHostInfo["host_su_user"])\
+                                user=sEncryptoUser,
+                                become_user=sEncryptoSuUser,
+                                connect_flag=0) \
+                        .update(detect_flag=0)
+
                     ret.append(host_id[0]["host_id"])
                 else:
                     # 检索下host_info中（不区分群组）是否存在该IP，

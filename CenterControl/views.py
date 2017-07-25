@@ -1215,7 +1215,7 @@ def getHostStatInfo(request):
             "denied_host_cnt",
             "closed_by_remote_host_cnt",
             "other_host_cnt",
-        ).order_by("insert_time")[:30]
+        ).order_by("insert_time")
 
         lDataTmp = []
         for dKv in lData:
